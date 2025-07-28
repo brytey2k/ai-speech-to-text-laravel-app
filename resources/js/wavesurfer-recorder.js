@@ -16,6 +16,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentAudioFrames = [];
     let isCollectingAudioFrames = false;
 
+    // Set up WebSocket listener for transcription results
+    const setupWebSocketListener = () => {
+        // Check if Echo is available
+        if (typeof window.Echo === 'undefined') {
+            console.error('Laravel Echo is not available');
+            return;
+        }
+
+        // Listen for the transcription.completed event on the public channel
+        window.Echo.channel('public')
+            .listen('.TranscriptionCompleted', (event) => {
+                console.log('Received transcription result:', event);
+
+                if (event.segmentId && event.transcription) {
+                    // Update the corresponding audio box with the transcription
+                    updateAudioBoxWithTranscription(event.segmentId, event.transcription);
+                }
+            });
+
+        console.log('WebSocket listener for transcription results set up');
+    };
+
     // Function to check speech duration and force chunking if needed
     const checkSpeechDuration = () => {
         if (!isSpeechActive || !vadInstance) return;
@@ -135,6 +157,72 @@ document.addEventListener('DOMContentLoaded', async () => {
         statusEl.classList.remove('d-none');
     };
 
+    // Function to create an audio box and add it to the container
+    const createAudioBox = (segmentId, audioBlob) => {
+        const boxesWrapper = document.getElementById('audio-boxes-wrapper');
+        if (!boxesWrapper) return null;
+
+        // Create a column for the audio box
+        const col = document.createElement('div');
+        col.className = 'col-md-4 mb-3';
+        col.dataset.segmentId = segmentId;
+
+        // Create the audio box
+        const box = document.createElement('div');
+        box.className = 'card';
+
+        // Create card body
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body';
+
+        // Add audio element
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.className = 'w-100 mb-2';
+        audio.src = URL.createObjectURL(audioBlob);
+
+        // Add status indicator
+        const status = document.createElement('div');
+        status.className = 'alert alert-info mb-2';
+        status.textContent = 'Processing...';
+
+        // Add transcription container (initially empty)
+        const transcription = document.createElement('div');
+        transcription.className = 'transcription mt-2';
+        transcription.innerHTML = '<em>Waiting for transcription...</em>';
+
+        // Assemble the box
+        cardBody.appendChild(audio);
+        cardBody.appendChild(status);
+        cardBody.appendChild(transcription);
+        box.appendChild(cardBody);
+        col.appendChild(box);
+
+        // Add to the container
+        boxesWrapper.prepend(col); // Add to the beginning so newest is first
+
+        return col;
+    };
+
+    // Function to update an audio box with transcription
+    const updateAudioBoxWithTranscription = (segmentId, transcriptionText) => {
+        const audioBox = document.querySelector(`#audio-boxes-wrapper [data-segment-id="${segmentId}"]`);
+        if (!audioBox) return;
+
+        // Update status
+        const status = audioBox.querySelector('.alert');
+        if (status) {
+            status.className = 'alert alert-success mb-2';
+            status.textContent = 'Transcription complete';
+        }
+
+        // Update transcription
+        const transcription = audioBox.querySelector('.transcription');
+        if (transcription) {
+            transcription.innerHTML = `<strong>Transcription:</strong> ${transcriptionText}`;
+        }
+    };
+
     // Function to send audio data to API endpoint
     const sendAudioToAPI = async (audioData) => {
         try {
@@ -156,6 +244,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             console.log('Audio segment sent to API:', response.data);
+
+            // Create an audio box for this segment
+            if (response.data && response.data.id) {
+                createAudioBox(response.data.id, wavBlob);
+            }
 
             // Update status to show success
             updateVADStatus('Audio segment sent successfully!', 'success');
@@ -237,6 +330,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             controlsEl.appendChild(timeDisplay);
 
             container.appendChild(controlsEl);
+        }
+
+        // Add container for audio boxes at the bottom of the page
+        if (!document.getElementById('audio-boxes-container')) {
+            const audioBoxesContainer = document.createElement('div');
+            audioBoxesContainer.id = 'audio-boxes-container';
+            audioBoxesContainer.className = 'mt-5';
+
+            const heading = document.createElement('h3');
+            heading.textContent = 'Recorded Audio Segments';
+            heading.className = 'mb-3';
+
+            audioBoxesContainer.appendChild(heading);
+
+            const boxesWrapper = document.createElement('div');
+            boxesWrapper.id = 'audio-boxes-wrapper';
+            boxesWrapper.className = 'row';
+
+            audioBoxesContainer.appendChild(boxesWrapper);
+            container.appendChild(audioBoxesContainer);
         }
 
         return true;
@@ -592,6 +705,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const { wavesurfer, record } = initWaveSurfer();
         await populateMicSelector(record);
         setupEventHandlers(wavesurfer, record);
+
+        // Set up WebSocket listener for transcription results
+        setupWebSocketListener();
     };
 
     // Initialize the application

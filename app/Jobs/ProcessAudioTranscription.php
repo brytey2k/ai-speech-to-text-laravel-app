@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Events\TranscriptionCompleted;
 use App\Models\AudioTranscription;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -60,6 +61,12 @@ class ProcessAudioTranscription implements ShouldQueue
                 $audioTranscription->update([
                     'transcription' => $transcription,
                 ]);
+
+                // Broadcast the transcription completed event
+                event(new TranscriptionCompleted(
+                    segmentId: $this->audioTranscriptionId,
+                    transcription: $transcription
+                ));
 
                 Log::info('Audio transcription completed', ['id' => $this->audioTranscriptionId]);
             } else {
