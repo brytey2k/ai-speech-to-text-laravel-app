@@ -30,6 +30,12 @@ class ProcessAudioTranscription implements ShouldQueue
         // Retrieve the audio transcription record
         $audioTranscription = AudioTranscription::find($this->audioTranscriptionId);
 
+//        event(new TranscriptionCompleted(
+//            segmentId: $this->audioTranscriptionId,
+//            transcription: 'everything is fine, we are still waiting for the transcription to complete'
+//        ));
+//        return;
+
         if (!$audioTranscription) {
             Log::error('Audio transcription not found', ['id' => $this->audioTranscriptionId]);
             return;

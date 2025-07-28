@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let isSpeechActive = false;
     let speechStartTime = 0;
     let chunkingTimer = null;
-    const MAX_CHUNK_DURATION = 15000; // 15 seconds in milliseconds
+    const MAX_CHUNK_DURATION = 15000; // 15 seconds in milliseconds // todo: should be in .env file
 
     // Variables for tracking audio data
     let currentAudioFrames = [];
@@ -269,91 +269,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, 3000);
         }
     };
-    // Create container elements if they don't exist
-    const setupDOMElements = () => {
-        const container = document.getElementById('wavesurfer-container');
-        if (!container) return false;
-
-        // Create elements if they don't exist
-        if (!document.getElementById('waveform')) {
-            const waveformEl = document.createElement('div');
-            waveformEl.id = 'waveform';
-            container.appendChild(waveformEl);
-        }
-
-        // Add status message element
-        if (!document.getElementById('vad-status')) {
-            const statusEl = document.createElement('div');
-            statusEl.id = 'vad-status';
-            statusEl.className = 'alert alert-info mt-3 d-none';
-            statusEl.textContent = 'Listening for speech...';
-            container.appendChild(statusEl);
-        }
-
-        if (!document.getElementById('mic-selector')) {
-            const micSelectorEl = document.createElement('select');
-            micSelectorEl.id = 'mic-selector';
-            micSelectorEl.className = 'form-select mb-3';
-            container.insertBefore(micSelectorEl, container.firstChild);
-        }
-
-        if (!document.getElementById('record-controls')) {
-            const controlsEl = document.createElement('div');
-            controlsEl.id = 'record-controls';
-            controlsEl.className = 'mt-3';
-
-            const startBtn = document.createElement('button');
-            startBtn.id = 'record-start';
-            startBtn.className = 'btn btn-primary me-2';
-            startBtn.textContent = 'Start Recording';
-
-            const pauseBtn = document.createElement('button');
-            pauseBtn.id = 'record-pause';
-            pauseBtn.className = 'btn btn-warning me-2';
-            pauseBtn.textContent = 'Pause';
-            pauseBtn.disabled = true;
-
-            const stopBtn = document.createElement('button');
-            stopBtn.id = 'record-stop';
-            stopBtn.className = 'btn btn-danger me-2';
-            stopBtn.textContent = 'Stop';
-            stopBtn.disabled = true;
-
-            const timeDisplay = document.createElement('span');
-            timeDisplay.id = 'record-time';
-            timeDisplay.className = 'ms-2';
-            timeDisplay.textContent = '00:00';
-
-            controlsEl.appendChild(startBtn);
-            controlsEl.appendChild(pauseBtn);
-            controlsEl.appendChild(stopBtn);
-            controlsEl.appendChild(timeDisplay);
-
-            container.appendChild(controlsEl);
-        }
-
-        // Add container for audio boxes at the bottom of the page
-        if (!document.getElementById('audio-boxes-container')) {
-            const audioBoxesContainer = document.createElement('div');
-            audioBoxesContainer.id = 'audio-boxes-container';
-            audioBoxesContainer.className = 'mt-5';
-
-            const heading = document.createElement('h3');
-            heading.textContent = 'Recorded Audio Segments';
-            heading.className = 'mb-3';
-
-            audioBoxesContainer.appendChild(heading);
-
-            const boxesWrapper = document.createElement('div');
-            boxesWrapper.id = 'audio-boxes-wrapper';
-            boxesWrapper.className = 'row';
-
-            audioBoxesContainer.appendChild(boxesWrapper);
-            container.appendChild(audioBoxesContainer);
-        }
-
-        return true;
-    };
 
     // Initialize WaveSurfer
     const initWaveSurfer = () => {
@@ -455,12 +370,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Setup event handlers
     const setupEventHandlers = (wavesurfer, record) => {
         const startBtn = document.getElementById('record-start');
-        const pauseBtn = document.getElementById('record-pause');
         const stopBtn = document.getElementById('record-stop');
         const timeDisplay = document.getElementById('record-time');
         const micSelector = document.getElementById('mic-selector');
 
-        if (!startBtn || !pauseBtn || !stopBtn || !timeDisplay || !micSelector) return;
+        if (!startBtn || !stopBtn || !timeDisplay || !micSelector) return;
 
         // Start recording
         startBtn.addEventListener('click', async () => {
@@ -566,8 +480,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     updateVADStatus('Error initializing voice activity detection: ' + vadErr.message, 'danger');
                 }
 
-                startBtn.disabled = true;
-                pauseBtn.disabled = false;
+                startBtn.classList.add('d-none');
+                stopBtn.classList.remove('d-none');
                 stopBtn.disabled = false;
                 micSelector.disabled = true;
             } catch (err) {
@@ -589,49 +503,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        // Pause/resume recording
-        pauseBtn.addEventListener('click', () => {
-            if (record.isPaused()) {
-                record.resumeRecording();
-
-                // Resume VAD if it exists
-                if (vadInstance) {
-                    console.log('Resuming VAD...');
-                    vadInstance.start();
-                    console.log('VAD resumed');
-
-                    // Update status
-                    updateVADStatus('Recording resumed. Listening for speech...', 'info');
-                }
-
-                pauseBtn.textContent = 'Pause';
-            } else {
-                record.pauseRecording();
-
-                // Pause VAD if it exists
-                if (vadInstance) {
-                    console.log('Pausing VAD...');
-                    vadInstance.pause();
-                    console.log('VAD paused');
-
-                    // Reset speech tracking variables
-                    isSpeechActive = false;
-                    isCollectingAudioFrames = false;
-                    currentAudioFrames = [];
-
-                    // Clear the chunking timer
-                    if (chunkingTimer) {
-                        clearInterval(chunkingTimer);
-                        chunkingTimer = null;
-                    }
-
-                    // Update status
-                    updateVADStatus('Recording paused', 'warning');
-                }
-
-                pauseBtn.textContent = 'Resume';
-            }
-        });
 
         // Stop recording
         stopBtn.addEventListener('click', () => {
@@ -675,10 +546,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 audioEl.parentNode.removeChild(audioEl);
             }
 
-            startBtn.disabled = false;
-            pauseBtn.disabled = true;
+            startBtn.classList.remove('d-none');
+            stopBtn.classList.add('d-none');
             stopBtn.disabled = true;
-            pauseBtn.textContent = 'Pause';
             micSelector.disabled = false;
         });
 
@@ -697,11 +567,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Main initialization
     const init = async () => {
-        if (!setupDOMElements()) {
-            console.error('Could not find wavesurfer container element');
-            return;
-        }
-
         const { wavesurfer, record } = initWaveSurfer();
         await populateMicSelector(record);
         setupEventHandlers(wavesurfer, record);
