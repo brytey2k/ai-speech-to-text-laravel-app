@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'openai' => [
+        'api_key' => env('OPEN_AI_WHISPER_API_KEY'),
+    ],
+
 ];
