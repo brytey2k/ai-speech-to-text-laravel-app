@@ -44,6 +44,16 @@ print_status "Setting timezone to UTC"
 ln -snf /usr/share/zoneinfo/UTC /etc/localtime
 echo "UTC" > /etc/timezone
 
+# Create app_user
+print_status "Creating app_user for application ownership"
+if ! id -u app_user &>/dev/null; then
+    useradd -m -s /bin/bash app_user
+    usermod -aG www-data app_user
+    print_status "Created app_user successfully"
+else
+    print_status "app_user already exists"
+fi
+
 # Update package lists
 print_status "Updating package lists"
 apt-get update
@@ -164,13 +174,18 @@ cd "$APP_DIR"
 
 # Set permissions
 print_status "Setting permissions"
-chown -R www-data:www-data "$APP_DIR"
+chown -R app_user:www-data "$APP_DIR"
 find "$APP_DIR" -type f -exec chmod 644 {} \;
 find "$APP_DIR" -type d -exec chmod 755 {} \;
 
+# Set special permissions for Laravel directories that need write access
+print_status "Setting special permissions for Laravel directories"
+chmod -R 775 "$APP_DIR/storage"
+chmod -R 775 "$APP_DIR/bootstrap/cache"
+
 # Install Composer dependencies
 print_status "Installing Composer dependencies"
-composer install --no-interaction --prefer-dist --optimize-autoloader
+sudo -u app_user composer install --no-interaction --prefer-dist --optimize-autoloader
 
 # Set up environment file
 print_status "Setting up environment file"
@@ -181,6 +196,7 @@ sed -i "s/DB_PASSWORD=/DB_PASSWORD=$DB_PASSWORD/" .env
 sed -i "s/REDIS_HOST=127.0.0.1/REDIS_HOST=$REDIS_HOST/" .env
 sed -i "s/REDIS_PORT=6379/REDIS_PORT=$REDIS_PORT/" .env
 sed -i "s/REDIS_PASSWORD=null/REDIS_PASSWORD=$REDIS_PASSWORD/" .env
+chown app_user:www-data .env
 
 # Reminder to update other important values in .env file
 print_warning "IMPORTANT: Please review and update other necessary values in the .env file, such as:"
@@ -192,31 +208,31 @@ print_warning "- Mail configuration (If email functionality is needed)"
 
 # Generate application key
 print_status "Generating application key"
-php artisan key:generate
+sudo -u app_user php artisan key:generate
 
 # Run migrations
 print_status "Running database migrations"
-php artisan migrate --force
+sudo -u app_user php artisan migrate --force
 
 # Install Node.js dependencies
 print_status "Installing Node.js dependencies"
-npm install
+sudo -u app_user npm install
 
 # Build assets
 print_status "Building assets"
-npm run build
+sudo -u app_user npm run build
 
 # Create storage link
 print_status "Creating storage link"
-php artisan storage:link
+sudo -u app_user php artisan storage:link
 
 # Install and configure Laravel Octane
 print_status "Installing and configuring Laravel Octane"
-php artisan octane:install --server=frankenphp
+sudo -u app_user php artisan octane:install --server=frankenphp
 
 # Install and configure Laravel Reverb
 print_status "Installing and configuring Laravel Reverb"
-php artisan reverb:install
+sudo -u app_user php artisan reverb:install
 
 # Set up Supervisor configuration
 print_status "Setting up Supervisor configuration"
@@ -228,7 +244,7 @@ process_name=%(program_name)s_%(process_num)02d
 command=/usr/bin/php -d variables_order=EGPCS $APP_DIR/artisan octane:start --server=frankenphp --host=0.0.0.0 --port=80
 autostart=true
 autorestart=true
-user=www-data
+user=app_user
 redirect_stderr=true
 stdout_logfile=/var/log/supervisor/laravel-octane.log
 stopwaitsecs=3600
@@ -241,7 +257,7 @@ process_name=%(program_name)s_%(process_num)02d
 command=/usr/bin/php $APP_DIR/artisan queue:listen --tries=3 --backoff=3 --queue=default
 autostart=true
 autorestart=true
-user=www-data
+user=app_user
 redirect_stderr=true
 stdout_logfile=/var/log/supervisor/laravel-queue.log
 stopwaitsecs=3600
@@ -254,7 +270,7 @@ process_name=%(program_name)s_%(process_num)02d
 command=/usr/bin/php $APP_DIR/artisan reverb:start --host=0.0.0.0 --port=8080
 autostart=true
 autorestart=true
-user=www-data
+user=app_user
 redirect_stderr=true
 stdout_logfile=/var/log/supervisor/laravel-reverb.log
 stopwaitsecs=3600
