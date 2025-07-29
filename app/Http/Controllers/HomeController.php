@@ -14,7 +14,12 @@ class HomeController extends Controller
 {
     public function index(Request $request): View
     {
-        return view('index');
+        // Fetch existing transcriptions from the database
+        $transcriptions = AudioTranscription::whereNotNull('transcription')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('index', compact('transcriptions'));
     }
 
     /**

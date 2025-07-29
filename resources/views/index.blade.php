@@ -2,32 +2,63 @@
 
 @section('title', 'Audio Transcriber')
 
+@php
+use Illuminate\Support\Facades\Storage;
+@endphp
+
 @section('content')
-    <div class="row">
-        <div class="col-12">
-            <h1>Welcome to Darli</h1>
+    <div class="flex flex-col md:flex-row md:space-x-4 h-screen">
+        <!-- Main content area (75% on larger screens) -->
+        <div class="w-full md:w-3/4 overflow-y-auto p-4 flex flex-col items-center justify-center h-full space-y-8">
+            <h1 class="text-center">Welcome to Darli</h1>
 
-            <div id="wavesurfer-container" class="mt-4">
-                <!-- Microphone selector -->
-                <select id="mic-selector" class="form-select mb-3"></select>
-
+            <div id="wavesurfer-container" class="w-full flex flex-col items-center space-y-8">
                 <!-- Waveform visualization -->
-                <div id="waveform"></div>
+                <div id="waveform" class="w-1/2 mx-auto"></div>
 
                 <!-- VAD status message -->
-                <div id="vad-status" class="alert alert-info mt-3 d-none">Listening for speech...</div>
+                <div id="vad-status" class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 hidden">Listening for speech...</div>
 
                 <!-- Recording controls -->
-                <div id="record-controls" class="mt-3">
-                    <button id="record-start" class="btn btn-primary me-2">Start Transcription</button>
-                    <button id="record-stop" class="btn btn-danger me-2 d-none" disabled>X</button>
-                    <span id="record-time" class="ms-2">00:00</span>
+                <div id="record-controls" class="flex justify-center items-center w-full">
+                    <button id="record-start" class="hover:bg-gray-800 text-white font-bold py-2 px-4 rounded mr-2" style="background-color: #0D0E10;">Start Transcription</button>
+                    <button id="record-stop" class="bg-white hover:bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded mr-2 hidden fixed bottom-8 left-1/2 transform -translate-x-1/2" style="color: #616161;" disabled>X</button>
+                    <span id="record-time" class="ml-2 self-center">00:00</span>
                 </div>
 
-                <!-- Audio boxes container -->
-                <div id="audio-boxes-container" class="mt-5">
-                    <h3 class="mb-3">Recorded Audio Segments</h3>
-                    <div id="audio-boxes-wrapper" class="row"></div>
+                <!-- Microphone selector -->
+                <div class="flex justify-center">
+                    <select id="mic-selector" class="w-auto min-w-fit px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transcripts area (25% on larger screens) -->
+        <div class="w-full md:w-1/4 p-4">
+            <div id="audio-boxes-container" class="bg-white p-4 rounded-lg shadow-md h-[85vh] overflow-y-auto">
+                <h3 class="mb-3">Transcripts</h3>
+                <div id="audio-boxes-wrapper" class="space-y-4 pt-2">
+                    @forelse($transcriptions as $transcription)
+                        <div class="w-full mb-3" data-segment-id="{{ $transcription->id }}">
+                            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                                <div class="p-4 relative">
+                                    <div class="absolute top-2 right-2 text-xs text-gray-500">
+                                        {{ $transcription->created_at->format('n/j/Y g:i A') }}
+                                    </div>
+                                    <div class="mb-4 text-gray-800">
+                                        {{ $transcription->transcription }}
+                                    </div>
+                                    @if(Storage::disk('public')->exists($transcription->file_path))
+                                        <audio controls class="w-full rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" src="{{ Storage::disk('public')->url($transcription->file_path) }}"></audio>
+                                    @else
+                                        <div class="text-red-500" style="color: #0D0E10">Audio file not available</div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-gray-500 text-center py-4">No transcriptions available yet.</div>
+                    @endforelse
                 </div>
             </div>
         </div>
@@ -136,12 +167,24 @@
                 // Update message and status type
                 statusEl.textContent = message;
 
-                // Remove all alert classes and add the new one
-                statusEl.className = statusEl.className.replace(/alert-\w+/g, '');
-                statusEl.className += ` alert-${type}`;
+                // Remove all alert classes and add the new one based on type
+                statusEl.className = ''; // Clear all classes
+
+                // Add appropriate Tailwind classes based on alert type
+                if (type === 'info') {
+                    statusEl.className = 'bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mt-3';
+                } else if (type === 'success') {
+                    statusEl.className = 'bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mt-3';
+                } else if (type === 'warning') {
+                    statusEl.className = 'bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-3';
+                } else if (type === 'danger') {
+                    statusEl.className = 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mt-3';
+                } else if (type === 'primary') {
+                    statusEl.className = 'bg-indigo-100 border-l-4 border-indigo-500 text-indigo-700 p-4 mt-3';
+                }
 
                 // Make sure the element is visible
-                statusEl.classList.remove('d-none');
+                statusEl.classList.remove('hidden');
             };
 
             // Function to create an audio box and add it to the container
@@ -151,37 +194,45 @@
 
                 // Create a column for the audio box
                 const col = document.createElement('div');
-                col.className = 'col-md-4 mb-3';
+                col.className = 'w-full mb-3';
                 col.dataset.segmentId = segmentId;
 
                 // Create the audio box
                 const box = document.createElement('div');
-                box.className = 'card';
+                box.className = 'bg-white rounded-lg shadow-md overflow-hidden';
 
                 // Create card body
                 const cardBody = document.createElement('div');
-                cardBody.className = 'card-body';
+                cardBody.className = 'p-4 relative'; // Added relative positioning for date placement
 
-                // Add audio element
-                const audio = document.createElement('audio');
-                audio.controls = true;
-                audio.className = 'w-100 mb-2';
-                audio.src = URL.createObjectURL(audioBlob);
+                // Add date element in the top right corner
+                const dateElement = document.createElement('div');
+                dateElement.className = 'absolute top-2 right-2 text-xs text-gray-500';
+                const currentDate = new Date();
+                dateElement.textContent = currentDate.toLocaleDateString() + ' ' +
+                                         currentDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
                 // Add status indicator
                 const status = document.createElement('div');
-                status.className = 'alert alert-info mb-2';
+                status.className = 'bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-2 mb-3';
                 status.textContent = 'Processing...';
 
                 // Add transcription container (initially empty)
                 const transcription = document.createElement('div');
-                transcription.className = 'transcription mt-2';
+                transcription.className = 'mb-4 text-gray-800';
                 transcription.innerHTML = '<em>Waiting for transcription...</em>';
 
+                // Add audio element (now below the transcription)
+                const audio = document.createElement('audio');
+                audio.controls = true;
+                audio.className = 'w-full rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
+                audio.src = URL.createObjectURL(audioBlob);
+
                 // Assemble the box
-                cardBody.appendChild(audio);
+                cardBody.appendChild(dateElement);
                 cardBody.appendChild(status);
                 cardBody.appendChild(transcription);
+                cardBody.appendChild(audio);
                 box.appendChild(cardBody);
                 col.appendChild(box);
 
@@ -197,16 +248,16 @@
                 if (!audioBox) return;
 
                 // Update status
-                const status = audioBox.querySelector('.alert');
+                const status = audioBox.querySelector('[class^="bg-blue-100"]');
                 if (status) {
-                    status.className = 'alert alert-success mb-2';
+                    status.className = 'bg-green-100 border-l-4 border-green-500 text-green-700 p-2 mb-3';
                     status.textContent = 'Transcription complete';
                 }
 
                 // Update transcription
-                const transcription = audioBox.querySelector('.transcription');
+                const transcription = audioBox.querySelector('.mb-4');
                 if (transcription) {
-                    transcription.innerHTML = `<strong>Transcription:</strong> ${transcriptionText}`;
+                    transcription.textContent = transcriptionText;
                 }
             };
 
@@ -262,13 +313,14 @@
                 // Create WaveSurfer instance
                 const wavesurfer = WaveSurfer.create({
                     container: '#waveform',
-                    waveColor: '#4F4A85',
-                    progressColor: '#383351',
-                    height: 100,
+                    waveColor: '#030303',
+                    progressColor: '#030303',
+                    height: 64,
                     cursorWidth: 1,
                     cursorColor: 'lightgray',
                     normalize: true,
-                    minPxPerSec: 100,
+                    minPxPerSec: 30,
+                    barWidth: 3,
                 });
 
                 // Create and register the Record plugin
@@ -461,8 +513,8 @@
                             updateVADStatus('Error initializing voice activity detection: ' + vadErr.message, 'danger');
                         }
 
-                        startBtn.classList.add('d-none');
-                        stopBtn.classList.remove('d-none');
+                        startBtn.classList.add('hidden');
+                        stopBtn.classList.remove('hidden');
                         stopBtn.disabled = false;
                         micSelector.disabled = true;
                     } catch (err) {
@@ -515,7 +567,7 @@
                         setTimeout(() => {
                             const statusEl = document.getElementById('vad-status');
                             if (statusEl) {
-                                statusEl.classList.add('d-none');
+                                statusEl.classList.add('hidden');
                             }
                         }, 3000);
                     }
@@ -526,8 +578,8 @@
                         audioEl.parentNode.removeChild(audioEl);
                     }
 
-                    startBtn.classList.remove('d-none');
-                    stopBtn.classList.add('d-none');
+                    startBtn.classList.remove('hidden');
+                    stopBtn.classList.add('hidden');
                     stopBtn.disabled = true;
                     micSelector.disabled = false;
                 });
