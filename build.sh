@@ -241,7 +241,7 @@ print_status "Setting up Supervisor configuration"
 cat > /etc/supervisor/conf.d/laravel-octane.conf << EOF
 [program:laravel-octane]
 process_name=%(program_name)s_%(process_num)02d
-command=/usr/bin/php -d variables_order=EGPCS $APP_DIR/artisan octane:start --server=frankenphp --host=0.0.0.0 --port=80
+command=/usr/bin/php -d variables_order=EGPCS $APP_DIR/artisan octane:start --server=frankenphp --host=0.0.0.0 --admin-port=2019 --port=80
 autostart=true
 autorestart=true
 user=app_user
