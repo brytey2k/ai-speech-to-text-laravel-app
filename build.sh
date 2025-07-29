@@ -329,6 +329,11 @@ stdout_logfile=/var/log/supervisor/laravel-reverb.log
 stopwaitsecs=3600
 EOF
 
+# Grant PHP the capability to bind to privileged ports (needed to bind to port 80 as non-root)
+# This resolves the "listen tcp :80: bind permission denied" error
+print_status "Granting PHP the capability to bind to privileged ports"
+setcap 'cap_net_bind_service=+ep' /usr/bin/php
+
 # Update and restart Supervisor
 print_status "Updating and restarting Supervisor"
 supervisorctl reread
