@@ -182,6 +182,14 @@ sed -i "s/REDIS_HOST=127.0.0.1/REDIS_HOST=$REDIS_HOST/" .env
 sed -i "s/REDIS_PORT=6379/REDIS_PORT=$REDIS_PORT/" .env
 sed -i "s/REDIS_PASSWORD=null/REDIS_PASSWORD=$REDIS_PASSWORD/" .env
 
+# Reminder to update other important values in .env file
+print_warning "IMPORTANT: Please review and update other necessary values in the .env file, such as:"
+print_warning "- APP_NAME, APP_ENV, APP_URL (Application settings)"
+print_warning "- OPEN_AI_WHISPER_API_KEY (Required for speech-to-text functionality)"
+print_warning "- REVERB_APP_ID, REVERB_APP_KEY, REVERB_APP_SECRET, REVERB_HOST (WebSocket settings)"
+print_warning "- AWS credentials (If using AWS services)"
+print_warning "- Mail configuration (If email functionality is needed)"
+
 # Generate application key
 print_status "Generating application key"
 php artisan key:generate
