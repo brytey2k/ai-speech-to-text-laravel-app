@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Events\TranscriptionCompleted;
-use App\Models\AudioTranscription;
+use App\Repositories\AudioTranscriptionRepository;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Http;
@@ -17,9 +17,10 @@ class ProcessAudioTranscription implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(protected int $audioTranscriptionId)
-    {
-        //
+    public function __construct(
+        protected int $audioTranscriptionId,
+        protected AudioTranscriptionRepository $audioTranscriptionRepository
+    ) {
     }
 
     /**
@@ -28,13 +29,7 @@ class ProcessAudioTranscription implements ShouldQueue
     public function handle(): void
     {
         // Retrieve the audio transcription record
-        $audioTranscription = AudioTranscription::find($this->audioTranscriptionId);
-
-        event(new TranscriptionCompleted(
-            segmentId: $this->audioTranscriptionId,
-            transcription: 'everything is fine, we are still waiting for the transcription to complete'
-        ));
-        return;
+        $audioTranscription = $this->audioTranscriptionRepository->findById($this->audioTranscriptionId);
 
         if (!$audioTranscription) {
             Log::error('Audio transcription not found', ['id' => $this->audioTranscriptionId]);
@@ -64,7 +59,7 @@ class ProcessAudioTranscription implements ShouldQueue
                 $transcription = $response->json('text');
 
                 // Update the transcription field
-                $audioTranscription->update([
+                $this->audioTranscriptionRepository->update($audioTranscription, [
                     'transcription' => $transcription,
                 ]);
 

@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SpeechSegmentRequest;
 use App\Jobs\ProcessAudioTranscription;
-use App\Models\AudioTranscription;
+use App\Repositories\AudioTranscriptionRepository;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\JsonResponse;
@@ -12,12 +13,23 @@ use Illuminate\Support\Str;
 
 class HomeController extends Controller
 {
+    /**
+     * The audio transcription repository instance.
+     */
+    protected $audioTranscriptionRepository;
+
+    /**
+     * Create a new controller instance.
+     */
+    public function __construct(AudioTranscriptionRepository $audioTranscriptionRepository)
+    {
+        $this->audioTranscriptionRepository = $audioTranscriptionRepository;
+    }
+
     public function index(Request $request): View
     {
         // Fetch existing transcriptions from the database
-        $transcriptions = AudioTranscription::whereNotNull('transcription')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $transcriptions = $this->audioTranscriptionRepository->getCompletedTranscriptions();
 
         return view('index', compact('transcriptions'));
     }
@@ -25,14 +37,9 @@ class HomeController extends Controller
     /**
      * Handle audio segments from VAD pause detection
      */
-    public function handleSpeechSegment(Request $request): JsonResponse
+    public function handleSpeechSegment(SpeechSegmentRequest $request): JsonResponse
     {
         try {
-            // Validate the request
-            $request->validate([
-                'audio' => 'required|file|mimes:wav,mp3,ogg,webm',
-            ]);
-
             // Get the audio file from the request
             $audioFile = $request->file('audio');
 
@@ -43,7 +50,7 @@ class HomeController extends Controller
             $path = $audioFile->storeAs('speech_segments', $filename, 'public');
 
             // Create a record in the database
-            $audioTranscription = AudioTranscription::create([
+            $audioTranscription = $this->audioTranscriptionRepository->create([
                 'file_path' => $path,
                 // transcription will be null initially
             ]);

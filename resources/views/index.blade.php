@@ -52,7 +52,7 @@ use Illuminate\Support\Facades\Storage;
                                         {{ $transcription->transcription }}
                                     </div>
                                     @if(Storage::disk('public')->exists($transcription->file_path))
-                                        <audio controls class="w-full rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" src="{{ Storage::disk('public')->url($transcription->file_path) }}"></audio>
+                                        <audio controls class="w-full rounded-md h-[25px] focus:outline-none focus:ring-2 focus:ring-blue-500" src="{{ asset('storage/' . str_replace('public/', '', $transcription->file_path)) }}"></audio>
                                     @else
                                         <div class="text-red-500" style="color: #0D0E10">Audio file not available</div>
                                     @endif
@@ -232,7 +232,7 @@ use Illuminate\Support\Facades\Storage;
                 // Add audio element (now below the transcription)
                 const audio = document.createElement('audio');
                 audio.controls = true;
-                audio.className = 'w-full rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
+                audio.className = 'w-full rounded-md h-[25px] focus:outline-none focus:ring-2 focus:ring-blue-500';
                 audio.src = URL.createObjectURL(audioBlob);
 
                 // Assemble the box
