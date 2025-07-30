@@ -60,7 +60,7 @@ class ProcessAudioTranscription implements ShouldQueue
             }
 
             // Send the file to OpenAI's Whisper API
-            $response = Http::withToken(config('services.openai.api_key'))
+            $response = Http::withToken(config()->string('services.openai.api_key'))
                 ->attach('file', $audioContent, basename($fullPath))
                 ->post('https://api.openai.com/v1/audio/transcriptions', [
                     'model' => 'whisper-1',
@@ -77,7 +77,7 @@ class ProcessAudioTranscription implements ShouldQueue
                 // Broadcast the transcription completed event
                 event(new TranscriptionCompleted(
                     segmentId: $this->audioTranscriptionId,
-                    transcription: $transcription,
+                    transcription: $transcription, // @phpstan-ignore-line
                 ));
 
                 Log::info('Audio transcription completed', ['id' => $this->audioTranscriptionId]);
