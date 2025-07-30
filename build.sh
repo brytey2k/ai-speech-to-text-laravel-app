@@ -334,7 +334,27 @@ if [ "$ENVIRONMENT" = "staging" ]; then
     # Install mkcert
     print_status "Installing mkcert"
     MKCERT_VERSION="v1.4.4"
-    wget -O /usr/local/bin/mkcert "https://github.com/FiloSottile/mkcert/releases/download/${MKCERT_VERSION}/mkcert-${MKCERT_VERSION}-linux-amd64"
+
+    # Detect system architecture
+    ARCH=$(uname -m)
+    print_status "Detected system architecture: $ARCH"
+
+    if [ "$ARCH" = "x86_64" ]; then
+        print_status "Downloading mkcert for x86_64 architecture"
+        wget -O /usr/local/bin/mkcert "https://github.com/FiloSottile/mkcert/releases/download/${MKCERT_VERSION}/mkcert-${MKCERT_VERSION}-linux-amd64"
+    elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+        print_status "Downloading mkcert for ARM64 architecture"
+        wget -O /usr/local/bin/mkcert "https://github.com/FiloSottile/mkcert/releases/download/${MKCERT_VERSION}/mkcert-${MKCERT_VERSION}-linux-arm64"
+    elif [ "$ARCH" = "armv7l" ] || [ "$ARCH" = "armhf" ] || [ "$ARCH" = "arm" ]; then
+        print_status "Downloading mkcert for 32-bit ARM architecture"
+        wget -O /usr/local/bin/mkcert "https://github.com/FiloSottile/mkcert/releases/download/${MKCERT_VERSION}/mkcert-${MKCERT_VERSION}-linux-arm"
+    else
+        print_warning "Unsupported architecture: $ARCH. Attempting to use amd64 version as fallback."
+        print_warning "If this fails, please manually download the appropriate mkcert binary for your architecture from:"
+        print_warning "https://github.com/FiloSottile/mkcert/releases/tag/${MKCERT_VERSION}"
+        wget -O /usr/local/bin/mkcert "https://github.com/FiloSottile/mkcert/releases/download/${MKCERT_VERSION}/mkcert-${MKCERT_VERSION}-linux-amd64"
+    fi
+
     chmod +x /usr/local/bin/mkcert
 
     # Create directory for certificates
