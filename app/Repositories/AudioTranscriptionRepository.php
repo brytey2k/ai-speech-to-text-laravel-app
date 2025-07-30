@@ -12,7 +12,7 @@ class AudioTranscriptionRepository
     /**
      * Get all transcriptions that have been completed
      *
-     * @return Collection
+     * @return Collection<int, AudioTranscription>
      */
     public function getCompletedTranscriptions(): Collection
     {
@@ -36,7 +36,7 @@ class AudioTranscriptionRepository
     /**
      * Create a new audio transcription record
      *
-     * @param array $data
+     * @param array<string, mixed> $data
      *
      * @return AudioTranscription
      */
@@ -49,7 +49,7 @@ class AudioTranscriptionRepository
      * Update an audio transcription record
      *
      * @param AudioTranscription $audioTranscription
-     * @param array $data
+     * @param array<string, mixed> $data
      *
      * @return bool
      */

@@ -14,22 +14,9 @@ use Illuminate\View\View;
 
 class HomeController extends Controller
 {
-    /**
-     * The audio transcription repository instance.
-     */
-    protected $audioTranscriptionRepository;
+    public function __construct(protected AudioTranscriptionRepository $audioTranscriptionRepository) {}
 
-    /**
-     * Create a new controller instance.
-     *
-     * @param AudioTranscriptionRepository $audioTranscriptionRepository
-     */
-    public function __construct(AudioTranscriptionRepository $audioTranscriptionRepository)
-    {
-        $this->audioTranscriptionRepository = $audioTranscriptionRepository;
-    }
-
-    public function index(Request $request): View
+    public function index(): View
     {
         // Fetch existing transcriptions from the database
         $transcriptions = $this->audioTranscriptionRepository->getCompletedTranscriptions();

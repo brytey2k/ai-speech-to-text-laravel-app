@@ -20,20 +20,20 @@ class ProcessAudioTranscription implements ShouldQueue
      * Create a new job instance.
      *
      * @param int $audioTranscriptionId
-     * @param AudioTranscriptionRepository $audioTranscriptionRepository
      */
     public function __construct(
         protected int $audioTranscriptionId,
-        protected AudioTranscriptionRepository $audioTranscriptionRepository,
     ) {}
 
     /**
      * Execute the job.
+     *
+     * @param AudioTranscriptionRepository $audioTranscriptionRepository
      */
-    public function handle(): void
+    public function handle(AudioTranscriptionRepository $audioTranscriptionRepository): void
     {
         // Retrieve the audio transcription record
-        $audioTranscription = $this->audioTranscriptionRepository->findById($this->audioTranscriptionId);
+        $audioTranscription = $audioTranscriptionRepository->findById($this->audioTranscriptionId);
 
         if (!$audioTranscription) {
             Log::error('Audio transcription not found', ['id' => $this->audioTranscriptionId]);
@@ -52,9 +52,16 @@ class ProcessAudioTranscription implements ShouldQueue
         $fullPath = Storage::disk('public')->path($filePath);
 
         try {
+            $audioContent = file_get_contents($fullPath);
+            if ($audioContent === false) {
+                Log::error('Failed to read audio file', ['path' => $fullPath]);
+                $this->fail('Failed to read audio file');
+                return;
+            }
+
             // Send the file to OpenAI's Whisper API
             $response = Http::withToken(config('services.openai.api_key'))
-                ->attach('file', file_get_contents($fullPath), basename($fullPath))
+                ->attach('file', $audioContent, basename($fullPath))
                 ->post('https://api.openai.com/v1/audio/transcriptions', [
                     'model' => 'whisper-1',
                 ]);
@@ -63,7 +70,7 @@ class ProcessAudioTranscription implements ShouldQueue
                 $transcription = $response->json('text');
 
                 // Update the transcription field
-                $this->audioTranscriptionRepository->update($audioTranscription, [
+                $audioTranscriptionRepository->update($audioTranscription, [
                     'transcription' => $transcription,
                 ]);
 
