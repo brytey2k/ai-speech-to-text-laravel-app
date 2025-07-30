@@ -62,10 +62,7 @@
             "@php artisan test"
         ],
         "phpstan": [
-            "vendor/bin/phpstan analyse"
-        ],
-        "phpstan-baseline": [
-            "vendor/bin/phpstan analyse --generate-baseline"
+            "vendor/bin/phpstan --memory-limit=512M"
         ],
         "pint": [
             "vendor/bin/pint"

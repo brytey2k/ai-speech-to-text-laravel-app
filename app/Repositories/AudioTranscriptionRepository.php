@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Repositories;
 
 use App\Models\AudioTranscription;
@@ -23,9 +25,10 @@ class AudioTranscriptionRepository
      * Find an audio transcription by ID
      *
      * @param int $id
+     *
      * @return AudioTranscription|null
      */
-    public function findById(int $id): ?AudioTranscription
+    public function findById(int $id): AudioTranscription|null
     {
         return AudioTranscription::find($id);
     }
@@ -34,6 +37,7 @@ class AudioTranscriptionRepository
      * Create a new audio transcription record
      *
      * @param array $data
+     *
      * @return AudioTranscription
      */
     public function create(array $data): AudioTranscription
@@ -46,6 +50,7 @@ class AudioTranscriptionRepository
      *
      * @param AudioTranscription $audioTranscription
      * @param array $data
+     *
      * @return bool
      */
     public function update(AudioTranscription $audioTranscription, array $data): bool

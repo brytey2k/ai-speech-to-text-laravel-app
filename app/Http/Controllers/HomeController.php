@@ -1,15 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Http\Requests\SpeechSegmentRequest;
 use App\Jobs\ProcessAudioTranscription;
 use App\Repositories\AudioTranscriptionRepository;
-use Illuminate\Http\Request;
-use Illuminate\View\View;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\View\View;
 
 class HomeController extends Controller
 {
@@ -20,6 +21,8 @@ class HomeController extends Controller
 
     /**
      * Create a new controller instance.
+     *
+     * @param AudioTranscriptionRepository $audioTranscriptionRepository
      */
     public function __construct(AudioTranscriptionRepository $audioTranscriptionRepository)
     {
@@ -36,6 +39,8 @@ class HomeController extends Controller
 
     /**
      * Handle audio segments from VAD pause detection
+     *
+     * @param SpeechSegmentRequest $request
      */
     public function handleSpeechSegment(SpeechSegmentRequest $request): JsonResponse
     {

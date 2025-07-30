@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Jobs;
 
 use App\Events\TranscriptionCompleted;
@@ -16,12 +18,14 @@ class ProcessAudioTranscription implements ShouldQueue
 
     /**
      * Create a new job instance.
+     *
+     * @param int $audioTranscriptionId
+     * @param AudioTranscriptionRepository $audioTranscriptionRepository
      */
     public function __construct(
         protected int $audioTranscriptionId,
-        protected AudioTranscriptionRepository $audioTranscriptionRepository
-    ) {
-    }
+        protected AudioTranscriptionRepository $audioTranscriptionRepository,
+    ) {}
 
     /**
      * Execute the job.
@@ -66,7 +70,7 @@ class ProcessAudioTranscription implements ShouldQueue
                 // Broadcast the transcription completed event
                 event(new TranscriptionCompleted(
                     segmentId: $this->audioTranscriptionId,
-                    transcription: $transcription
+                    transcription: $transcription,
                 ));
 
                 Log::info('Audio transcription completed', ['id' => $this->audioTranscriptionId]);
