@@ -29,3 +29,5 @@ frankenphp1
 frankenphp-worker.php
 
 .vagrant
+.phpstorm.meta.php
+_ide_helper.php

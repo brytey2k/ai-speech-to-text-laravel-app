@@ -16,6 +16,7 @@
         "laravel/tinker": "^2.10.1"
     },
     "require-dev": {
+        "barryvdh/laravel-ide-helper": "^3.6",
         "fakerphp/faker": "^1.23",
         "larastan/larastan": "^3.0",
         "laravel/pail": "^1.2.2",
@@ -63,6 +64,12 @@
         ],
         "phpstan": [
             "vendor/bin/phpstan --memory-limit=512M"
+        ],
+        "ide-helper": [
+            "@php artisan ide-helper:generate",
+            "@php artisan ide-helper:meta",
+            "@php artisan ide-helper:models -W",
+            "@composer pint app/Models"
         ],
         "pint": [
             "vendor/bin/pint"
