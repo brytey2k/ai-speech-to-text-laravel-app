@@ -1,12 +1,13 @@
 /**
- * Format time in MM:SS format
+ * Format time in HH:MM:SS format
  * @param {number} seconds - The time in seconds
- * @returns {string} - Formatted time string in MM:SS format
+ * @returns {string} - Formatted time string in HH:MM:SS format
  */
 export const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
-    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
 /**

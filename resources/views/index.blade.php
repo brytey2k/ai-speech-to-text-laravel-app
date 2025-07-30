@@ -7,9 +7,12 @@ use Illuminate\Support\Facades\Storage;
 @endphp
 
 @section('content')
+    @php
+        $hasTranscriptions = count($transcriptions) > 0;
+    @endphp
     <div class="flex flex-col md:flex-row md:space-x-4 h-screen">
-        <!-- Main content area (75% on larger screens) -->
-        <div class="w-full md:w-3/4 overflow-y-auto p-4 flex flex-col items-center justify-center h-full space-y-8">
+        <!-- Main content area (100% when no transcripts, 75% when transcripts exist) -->
+        <div id="main-content-area" class="w-full {{ $hasTranscriptions ? 'md:w-3/4' : 'md:w-full' }} overflow-y-auto p-4 flex flex-col items-center justify-center h-full space-y-8 transition-all duration-500 ease-in-out">
             <h1 class="text-center">Welcome to Darli</h1>
 
             <div id="wavesurfer-container" class="w-full flex flex-col items-center space-y-8">
@@ -23,7 +26,7 @@ use Illuminate\Support\Facades\Storage;
                 <div id="record-controls" class="flex justify-center items-center w-full">
                     <button id="record-start" class="hover:bg-gray-800 text-white font-bold py-2 px-4 rounded mr-2" style="background-color: #0D0E10;">Start Transcription</button>
                     <button id="record-stop" class="bg-white hover:bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded mr-2 hidden fixed bottom-8 left-1/2 transform -translate-x-1/2" style="color: #616161;" disabled>X</button>
-                    <span id="record-time" class="ml-2 self-center">00:00</span>
+                    <span id="record-time" class="ml-2 self-center">00:00:00</span>
                 </div>
 
                 <!-- Microphone selector -->
@@ -33,8 +36,8 @@ use Illuminate\Support\Facades\Storage;
             </div>
         </div>
 
-        <!-- Transcripts area (25% on larger screens) -->
-        <div class="w-full md:w-1/4 p-4">
+        <!-- Transcripts area (25% on larger screens, hidden when no transcripts) -->
+        <div id="transcript-area" class="w-full md:w-1/4 p-4 {{ !$hasTranscriptions ? 'md:hidden' : '' }} transition-all duration-500 ease-in-out">
             <div id="audio-boxes-container" class="bg-white p-4 rounded-lg shadow-md h-[85vh] overflow-y-auto">
                 <h3 class="mb-3">Transcripts</h3>
                 <div id="audio-boxes-wrapper" class="space-y-4 pt-2">
@@ -192,6 +195,10 @@ use Illuminate\Support\Facades\Storage;
                 const boxesWrapper = document.getElementById('audio-boxes-wrapper');
                 if (!boxesWrapper) return null;
 
+                // Check if this is the first transcript
+                const isFirstTranscript = boxesWrapper.querySelector('.w-full.mb-3') === null &&
+                                         boxesWrapper.textContent.trim() === 'No transcriptions available yet.';
+
                 // Create a column for the audio box
                 const col = document.createElement('div');
                 col.className = 'w-full mb-3';
@@ -236,8 +243,34 @@ use Illuminate\Support\Facades\Storage;
                 box.appendChild(cardBody);
                 col.appendChild(box);
 
+                // Clear "No transcriptions available yet" message if it exists
+                if (isFirstTranscript) {
+                    boxesWrapper.innerHTML = '';
+                }
+
                 // Add to the container
                 boxesWrapper.prepend(col); // Add to the beginning so newest is first
+
+                // If this is the first transcript, update the layout
+                if (isFirstTranscript) {
+                    // Get the main content and transcript areas
+                    const mainContentArea = document.getElementById('main-content-area');
+                    const transcriptArea = document.getElementById('transcript-area');
+
+                    if (mainContentArea && transcriptArea) {
+                        // Small delay to ensure DOM is updated before animation starts
+                        setTimeout(() => {
+                            // Update classes for main content area
+                            mainContentArea.classList.remove('md:w-full');
+                            mainContentArea.classList.add('md:w-3/4');
+
+                            // Show transcript area
+                            transcriptArea.classList.remove('md:hidden');
+
+                            console.log('Layout updated: Main content area is now 75%, transcript area is now visible');
+                        }, 50);
+                    }
+                }
 
                 return col;
             };
@@ -516,7 +549,7 @@ use Illuminate\Support\Facades\Storage;
                         startBtn.classList.add('hidden');
                         stopBtn.classList.remove('hidden');
                         stopBtn.disabled = false;
-                        micSelector.disabled = true;
+                        micSelector.classList.add('hidden');
                     } catch (err) {
                         console.error('Error starting recording:', err);
 
@@ -581,18 +614,23 @@ use Illuminate\Support\Facades\Storage;
                     startBtn.classList.remove('hidden');
                     stopBtn.classList.add('hidden');
                     stopBtn.disabled = true;
-                    micSelector.disabled = false;
+                    micSelector.classList.remove('hidden');
                 });
 
                 // Update time display
                 record.on('record-progress', (duration) => {
-                    timeDisplay.textContent = AudioHelpers.formatTime(duration);
+                    // Convert duration to seconds if it's in milliseconds
+                    const durationInSeconds = duration > 1000 ? duration / 1000 : duration;
+                    timeDisplay.textContent = AudioHelpers.formatTime(durationInSeconds);
                 });
 
                 // Handle recording end
                 record.on('record-end', (blob) => {
                     console.log('Recording finished');
-                    timeDisplay.textContent = AudioHelpers.formatTime(record.getDuration());
+                    // Get duration and convert to seconds if it's in milliseconds
+                    const duration = record.getDuration();
+                    const durationInSeconds = duration > 1000 ? duration / 1000 : duration;
+                    timeDisplay.textContent = AudioHelpers.formatTime(durationInSeconds);
                     // No longer creating or displaying the audio element
                 });
             };

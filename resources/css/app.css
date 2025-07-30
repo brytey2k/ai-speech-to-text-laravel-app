@@ -18,3 +18,22 @@ h1 {
     font-size: 60px;
     font-weight: 600;
 }
+
+/* Layout transition animations */
+#main-content-area {
+    transition: width 0.5s ease-in-out, margin 0.5s ease-in-out;
+}
+
+#transcript-area {
+    transition: width 0.5s ease-in-out, opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+}
+
+#transcript-area.md\:hidden {
+    opacity: 0;
+    transform: translateX(20px);
+}
+
+#transcript-area:not(.md\:hidden) {
+    opacity: 1;
+    transform: translateX(0);
+}
