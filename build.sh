@@ -4,9 +4,11 @@
 # This script sets up the Speech-to-Text application on an Ubuntu server
 # without using Docker, but following a similar setup to the Docker configuration.
 #
-# Usage: sudo ./build.sh -u <username>
+# Usage: sudo ./build.sh -u <username> -e <environment> [-d <domain>]
 #   where <username> is the normal user that will own the application files
 #   and run composer, npm, and php artisan commands.
+#   <environment> is either 'staging' or 'production'
+#   <domain> is required when environment is 'production'
 
 set -e  # Exit immediately if a command exits with a non-zero status
 
@@ -33,21 +35,36 @@ print_error() {
 
 # Function to print usage information
 print_usage() {
-    echo "Usage: sudo $0 -u <username>"
-    echo "  -u, --user     Username of the normal user that will own the application"
-    echo "  -h, --help     Display this help message"
+    echo "Usage: sudo $0 -u <username> -e <environment> [-d <domain>]"
+    echo "  -u, --user         Username of the normal user that will own the application"
+    echo "  -e, --environment  Environment (staging or production)"
+    echo "  -d, --domain       Domain name (required for production environment)"
+    echo "  -h, --help         Display this help message"
     echo ""
     echo "The specified user must already exist on the system."
     echo "This user will own the application files and run composer, npm, and php artisan commands."
     echo "Admin commands like installing packages will be run by the sudo user (the one running this script)."
+    echo ""
+    echo "For staging environment, mkcert will be used to generate SSL certificates."
+    echo "For production environment, Let's Encrypt will be used to generate SSL certificates for the specified domain."
 }
 
 # Parse command line arguments
 USERNAME=""
+ENVIRONMENT=""
+DOMAIN=""
 while [[ $# -gt 0 ]]; do
     case $1 in
         -u|--user)
             USERNAME="$2"
+            shift 2
+            ;;
+        -e|--environment)
+            ENVIRONMENT="$2"
+            shift 2
+            ;;
+        -d|--domain)
+            DOMAIN="$2"
             shift 2
             ;;
         -h|--help)
@@ -65,6 +82,26 @@ done
 # Check if username is provided
 if [ -z "$USERNAME" ]; then
     print_error "Username is required"
+    print_usage
+    exit 1
+fi
+
+# Check if environment is provided and valid
+if [ -z "$ENVIRONMENT" ]; then
+    print_error "Environment is required"
+    print_usage
+    exit 1
+fi
+
+if [ "$ENVIRONMENT" != "staging" ] && [ "$ENVIRONMENT" != "production" ]; then
+    print_error "Environment must be either 'staging' or 'production'"
+    print_usage
+    exit 1
+fi
+
+# Check if domain is provided for production environment
+if [ "$ENVIRONMENT" = "production" ] && [ -z "$DOMAIN" ]; then
+    print_error "Domain is required for production environment"
     print_usage
     exit 1
 fi
@@ -287,12 +324,47 @@ sudo -u $USERNAME php artisan octane:install --server=frankenphp
 print_status "Installing and configuring Laravel Reverb as $USERNAME"
 sudo -u $USERNAME php artisan reverb:install
 
-# Configure Nginx as a reverse proxy
-print_status "Configuring Nginx as a reverse proxy"
-cat > /etc/nginx/sites-available/laravel-app << EOF
+# Set up SSL certificates based on environment
+if [ "$ENVIRONMENT" = "staging" ]; then
+    print_status "Setting up SSL certificates for staging environment using mkcert"
+
+    # Install mkcert dependencies
+    apt-get install -y libnss3-tools
+
+    # Install mkcert
+    print_status "Installing mkcert"
+    MKCERT_VERSION="v1.4.4"
+    wget -O /usr/local/bin/mkcert "https://github.com/FiloSottile/mkcert/releases/download/${MKCERT_VERSION}/mkcert-${MKCERT_VERSION}-linux-amd64"
+    chmod +x /usr/local/bin/mkcert
+
+    # Create directory for certificates
+    mkdir -p /etc/nginx/ssl
+
+    # Generate certificates
+    print_status "Generating SSL certificates for localhost"
+    mkcert -install
+    mkcert -cert-file /etc/nginx/ssl/localhost.crt -key-file /etc/nginx/ssl/localhost.key localhost 127.0.0.1 ::1
+
+    # Configure Nginx with SSL for staging
+    print_status "Configuring Nginx with SSL for staging environment"
+    cat > /etc/nginx/sites-available/laravel-app << EOF
 server {
     listen 80;
     server_name _;
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name _;
+
+    ssl_certificate /etc/nginx/ssl/localhost.crt;
+    ssl_certificate_key /etc/nginx/ssl/localhost.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:10m;
 
     location / {
         proxy_pass http://127.0.0.1:8000;
@@ -304,15 +376,63 @@ server {
 }
 EOF
 
-# Enable the Nginx site
-ln -sf /etc/nginx/sites-available/laravel-app /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
+elif [ "$ENVIRONMENT" = "production" ]; then
+    print_status "Setting up SSL certificates for production environment using Let's Encrypt"
 
-# Test Nginx configuration
-nginx -t
+    # Install certbot
+    print_status "Installing certbot"
+    apt-get install -y certbot python3-certbot-nginx
 
-# Restart Nginx
-systemctl restart nginx
+    # Configure Nginx for the domain
+    print_status "Configuring Nginx for domain: $DOMAIN"
+    cat > /etc/nginx/sites-available/laravel-app << EOF
+server {
+    listen 80;
+    server_name $DOMAIN;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+
+    # Enable the Nginx site
+    ln -sf /etc/nginx/sites-available/laravel-app /etc/nginx/sites-enabled/
+    rm -f /etc/nginx/sites-enabled/default
+
+    # Test Nginx configuration
+    nginx -t
+
+    # Restart Nginx
+    systemctl restart nginx
+
+    # Obtain SSL certificate
+    print_status "Obtaining SSL certificate from Let's Encrypt for $DOMAIN"
+    certbot --nginx -d $DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN
+
+    print_status "SSL certificate successfully installed for $DOMAIN"
+else
+    # This should never happen due to earlier validation
+    print_error "Invalid environment: $ENVIRONMENT"
+    exit 1
+fi
+
+# If not production, enable the Nginx site here (for production it's done before certbot)
+if [ "$ENVIRONMENT" != "production" ]; then
+    # Enable the Nginx site
+    ln -sf /etc/nginx/sites-available/laravel-app /etc/nginx/sites-enabled/
+    rm -f /etc/nginx/sites-enabled/default
+
+    # Test Nginx configuration
+    nginx -t
+
+    # Restart Nginx
+    systemctl restart nginx
+fi
 systemctl enable nginx
 
 # Set up Supervisor configuration
@@ -368,5 +488,9 @@ supervisorctl update
 supervisorctl restart all
 
 print_status "Setup complete! The application should now be running."
-print_status "You can access it at http://your-server-ip"
+if [ "$ENVIRONMENT" = "staging" ]; then
+    print_status "You can access it at https://localhost or https://127.0.0.1"
+elif [ "$ENVIRONMENT" = "production" ]; then
+    print_status "You can access it at https://$DOMAIN"
+fi
 print_status "WebSocket server is running on port 8080"
