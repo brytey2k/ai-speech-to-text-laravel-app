@@ -114,7 +114,7 @@ apt-get update
 # Install system dependencies
 print_status "Installing system dependencies"
 apt-get install -y gnupg curl ca-certificates zip unzip git supervisor sqlite3 libcap2-bin \
-    libpng-dev python3 dnsutils librsvg2-bin fswatch ffmpeg nano
+    libpng-dev python3 dnsutils librsvg2-bin fswatch ffmpeg nano nginx
 
 # Add PHP repository
 print_status "Adding PHP repository"
@@ -287,6 +287,34 @@ sudo -u $USERNAME php artisan octane:install --server=frankenphp
 print_status "Installing and configuring Laravel Reverb as $USERNAME"
 sudo -u $USERNAME php artisan reverb:install
 
+# Configure Nginx as a reverse proxy
+print_status "Configuring Nginx as a reverse proxy"
+cat > /etc/nginx/sites-available/laravel-app << EOF
+server {
+    listen 80;
+    server_name _;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+
+# Enable the Nginx site
+ln -sf /etc/nginx/sites-available/laravel-app /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+
+# Test Nginx configuration
+nginx -t
+
+# Restart Nginx
+systemctl restart nginx
+systemctl enable nginx
+
 # Set up Supervisor configuration
 print_status "Setting up Supervisor configuration"
 
@@ -294,7 +322,7 @@ print_status "Setting up Supervisor configuration"
 cat > /etc/supervisor/conf.d/laravel-octane.conf << EOF
 [program:laravel-octane]
 process_name=%(program_name)s_%(process_num)02d
-command=/usr/bin/php -d variables_order=EGPCS $APP_DIR/artisan octane:start --server=frankenphp --host=0.0.0.0 --admin-port=2019 --port=80
+command=/usr/bin/php -d variables_order=EGPCS $APP_DIR/artisan octane:start --server=frankenphp --host=0.0.0.0 --admin-port=2019 --port=8000
 autostart=true
 autorestart=true
 user=$USERNAME
@@ -329,10 +357,9 @@ stdout_logfile=/var/log/supervisor/laravel-reverb.log
 stopwaitsecs=3600
 EOF
 
-# Grant PHP the capability to bind to privileged ports (needed to bind to port 80 as non-root)
-# This resolves the "listen tcp :80: bind permission denied" error
-print_status "Granting PHP the capability to bind to privileged ports"
-setcap 'cap_net_bind_service=+ep' /usr/bin/php
+# No longer need to grant PHP the capability to bind to privileged ports
+# as nginx is handling port 80 and PHP is running on non-privileged port 8000
+print_status "PHP will run on non-privileged port 8000, with nginx as reverse proxy on port 80"
 
 # Update and restart Supervisor
 print_status "Updating and restarting Supervisor"
