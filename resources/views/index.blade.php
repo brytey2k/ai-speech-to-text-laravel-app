@@ -357,9 +357,18 @@ use Illuminate\Support\Facades\Storage;
                     // Update status to show success
                     updateVADStatus('Audio segment sent successfully!', 'success');
 
-                    // Reset status after a delay
+                    // Hide status after 2 seconds
                     setTimeout(() => {
-                        updateVADStatus('Listening for speech...', 'info');
+                        // Only update to "Listening for speech..." if VAD is still active
+                        if (vadInstance) {
+                            updateVADStatus('Listening for speech...', 'info');
+                        } else {
+                            // Hide the status element if VAD is not active
+                            const statusEl = document.getElementById('vad-status');
+                            if (statusEl) {
+                                statusEl.classList.add('hidden');
+                            }
+                        }
                     }, 2000);
                 } catch (error) {
                     console.error('Error sending audio to API:', error);
@@ -367,10 +376,19 @@ use Illuminate\Support\Facades\Storage;
                     // Update status to show error
                     updateVADStatus('Error sending audio segment: ' + error.message, 'danger');
 
-                    // Reset status after a delay
+                    // Hide status after 2 seconds
                     setTimeout(() => {
-                        updateVADStatus('Listening for speech...', 'info');
-                    }, 3000);
+                        // Only update to "Listening for speech..." if VAD is still active
+                        if (vadInstance) {
+                            updateVADStatus('Listening for speech...', 'info');
+                        } else {
+                            // Hide the status element if VAD is not active
+                            const statusEl = document.getElementById('vad-status');
+                            if (statusEl) {
+                                statusEl.classList.add('hidden');
+                            }
+                        }
+                    }, 2000);
                 }
             };
 
@@ -542,6 +560,33 @@ use Illuminate\Support\Facades\Storage;
 
                                     // Send the audio segment to the API endpoint
                                     sendAudioToAPI(audio);
+
+                                    // Automatically stop recording after sending the segment
+                                    record.stopRecording();
+
+                                    // Clean up VAD instance
+                                    if (vadInstance) {
+                                        vadInstance.destroy();
+                                        vadInstance = null;
+                                        console.log('VAD stopped automatically after pause detection');
+
+                                        // Update UI to show recording has stopped
+                                        startBtn.classList.remove('hidden');
+                                        stopBtn.classList.add('hidden');
+                                        stopBtn.disabled = true;
+                                        micSelector.classList.remove('hidden');
+
+                                        // Update status
+                                        updateVADStatus('Recording stopped automatically after pause detection. Click Start Transcription to record again.', 'info');
+
+                                        // Hide status after 2 seconds
+                                        setTimeout(() => {
+                                            const statusEl = document.getElementById('vad-status');
+                                            if (statusEl) {
+                                                statusEl.classList.add('hidden');
+                                            }
+                                        }, 2000);
+                                    }
                                 },
                                 onVADMisfire: () => {
                                     console.log('VAD misfire detected');
@@ -560,7 +605,15 @@ use Illuminate\Support\Facades\Storage;
 
                                     // Reset status after a delay
                                     setTimeout(() => {
-                                        updateVADStatus('Listening for speech...', 'info');
+                                        if (vadInstance) {
+                                            updateVADStatus('Listening for speech...', 'info');
+                                        } else {
+                                            // Hide the status element if VAD is not active
+                                            const statusEl = document.getElementById('vad-status');
+                                            if (statusEl) {
+                                                statusEl.classList.add('hidden');
+                                            }
+                                        }
                                     }, 2000);
                                 }
                             });
@@ -572,11 +625,27 @@ use Illuminate\Support\Facades\Storage;
 
                             // Reset status after a delay
                             setTimeout(() => {
-                                updateVADStatus('Listening for speech...', 'info');
+                                if (vadInstance) {
+                                    updateVADStatus('Listening for speech...', 'info');
+                                } else {
+                                    // Hide the status element if VAD is not active
+                                    const statusEl = document.getElementById('vad-status');
+                                    if (statusEl) {
+                                        statusEl.classList.add('hidden');
+                                    }
+                                }
                             }, 2000);
                         } catch (vadErr) {
                             console.error('Error initializing VAD:', vadErr);
                             updateVADStatus('Error initializing voice activity detection: ' + vadErr.message, 'danger');
+
+                            // Hide status after 2 seconds
+                            setTimeout(() => {
+                                const statusEl = document.getElementById('vad-status');
+                                if (statusEl) {
+                                    statusEl.classList.add('hidden');
+                                }
+                            }, 2000);
                         }
 
                         startBtn.classList.add('hidden');
@@ -629,13 +698,13 @@ use Illuminate\Support\Facades\Storage;
                         // Update status
                         updateVADStatus('Recording stopped', 'danger');
 
-                        // Hide status after a delay
+                        // Hide status after 2 seconds
                         setTimeout(() => {
                             const statusEl = document.getElementById('vad-status');
                             if (statusEl) {
                                 statusEl.classList.add('hidden');
                             }
-                        }, 3000);
+                        }, 2000);
                     }
 
                     // Remove any existing audio element
