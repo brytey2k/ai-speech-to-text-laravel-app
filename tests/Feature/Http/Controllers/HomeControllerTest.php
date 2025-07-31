@@ -9,6 +9,7 @@ use App\Jobs\ProcessAudioTranscription;
 use App\Models\AudioTranscription;
 use App\Repositories\AudioTranscriptionRepository;
 use App\Services\UuidGenerator;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -54,6 +55,8 @@ class HomeControllerTest extends TestCase
 
     public function test_handle_speech_segment_stores_file_and_dispatches_job(): void
     {
+        Carbon::setTestNow(now());
+
         // Mock the UuidGenerator that will be used by the HandleSpeechSegment action
         $uuidGeneratorMock = $this->createMock(UuidGenerator::class);
         $uuidGeneratorMock->expects($this->once())
@@ -76,7 +79,7 @@ class HomeControllerTest extends TestCase
 
         // Assert the file was stored
         Storage::disk('public')
-            ->assertExists('speech_segments/speech_segment_test-uuid-1234-5678-90ab-cdef12345678.mp3');
+            ->assertExists('speech_segments/' . now()->format('Y/m/d/H') . '/speech_segment_test-uuid-1234-5678-90ab-cdef12345678.mp3');
 
         // Assert a record was created in the database
         $this->assertDatabaseCount('audio_transcriptions', 1);
@@ -86,6 +89,7 @@ class HomeControllerTest extends TestCase
 
         // Assert the job was dispatched
         Queue::assertPushed(ProcessAudioTranscription::class, static fn($job) => $job->audioTranscriptionId === $audioTranscription->id);
+        Carbon::setTestNow(null);
     }
 
     public function test_handle_speech_segment_returns_error_on_exception(): void

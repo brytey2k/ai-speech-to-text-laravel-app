@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(static function (Middleware $middleware): void {
         //
     })
+    ->withSchedule(static function (Illuminate\Console\Scheduling\Schedule $schedule): void {
+        $schedule->command('transcriptions:resubmit-failed')->everyMinute();
+    })
     ->withExceptions(static function (Exceptions $exceptions): void {
         //
     })->create();

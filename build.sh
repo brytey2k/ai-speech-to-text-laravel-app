@@ -361,6 +361,11 @@ EOF
 # as nginx is handling port 80 and PHP is running on non-privileged port 8000
 print_status "PHP will run on non-privileged port 8000, with nginx as reverse proxy on port 80"
 
+# Set up Laravel Scheduler cron job
+print_status "Setting up Laravel Scheduler cron job"
+echo "* * * * * $USERNAME cd $APP_DIR && php artisan schedule:run >> /dev/null 2>&1" > /etc/cron.d/laravel-scheduler
+chmod 0644 /etc/cron.d/laravel-scheduler
+
 # Update and restart Supervisor
 print_status "Updating and restarting Supervisor"
 supervisorctl reread
