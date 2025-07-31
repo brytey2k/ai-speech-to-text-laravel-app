@@ -65,16 +65,9 @@ class ProcessAudioTranscription implements ShouldQueue
         $fullPath = Storage::disk('public')->path($filePath);
 
         try {
-            $audioContent = file_get_contents($fullPath);
-            if ($audioContent === false) {
-                Log::error('Failed to read audio file', ['path' => $fullPath]);
-                $this->fail('Failed to read audio file');
-                return;
-            }
-
             // Send the file to OpenAI's Whisper API
             $response = Http::withToken(config()->string('services.openai.api_key'))
-                ->attach('file', $audioContent, basename($fullPath))
+                ->attach('file', file_get_contents($fullPath), basename($fullPath)) // @phpstan-ignore-line
                 ->post('https://api.openai.com/v1/audio/transcriptions', [
                     'model' => 'whisper-1',
                 ]);

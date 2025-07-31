@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Controllers;
 
+use App\Actions\HandleSpeechSegment;
 use App\Jobs\ProcessAudioTranscription;
 use App\Models\AudioTranscription;
 use App\Repositories\AudioTranscriptionRepository;
@@ -53,6 +54,7 @@ class HomeControllerTest extends TestCase
 
     public function test_handle_speech_segment_stores_file_and_dispatches_job(): void
     {
+        // Mock the UuidGenerator that will be used by the HandleSpeechSegment action
         $uuidGeneratorMock = $this->createMock(UuidGenerator::class);
         $uuidGeneratorMock->expects($this->once())
             ->method('generate')
@@ -88,7 +90,7 @@ class HomeControllerTest extends TestCase
 
     public function test_handle_speech_segment_returns_error_on_exception(): void
     {
-        // Mock the repository to throw an exception
+        // Mock the repository to throw an exception when used by the HandleSpeechSegment action
         $mockRepository = $this->createMock(AudioTranscriptionRepository::class);
         $mockRepository->method('create')->willThrowException(new \Exception('Test exception'));
         $this->app->instance(AudioTranscriptionRepository::class, $mockRepository);

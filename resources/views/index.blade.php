@@ -64,7 +64,7 @@
                                             bg-gray-100 text-gray-800
                                         @endif
                                     ">
-                                        {{ $transcription->status?->label() ?? 'Pending' }}
+                                        {{ $transcription->status?->label() ?? TranscriptionStatus::PENDING->label() }}
                                     </div>
                                     <div class="mb-4 text-gray-800 mt-6">
                                         @if($transcription->transcription)
