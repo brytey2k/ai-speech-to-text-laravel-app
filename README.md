@@ -1,61 +1,91 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Darli - Speech-to-Text Transcription Application
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Darli is a web application that provides real-time speech-to-text transcription using OpenAI's Whisper API. It allows users to record audio through their browser, processes the audio segments, and displays the transcribed text.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Real-time Audio Recording**: Record audio directly from your browser with a simple interface
+- **Voice Activity Detection (VAD)**: Automatically detects speech segments
+- **Waveform Visualization**: Visual representation of audio input
+- **Asynchronous Processing**: Background processing of audio transcriptions using Laravel queues
+- **Transcription History**: View and playback all previous transcriptions
+- **Status Tracking**: Monitor the status of each transcription (pending, in progress, success, failed)
+- **Real-time Updates**: Receive real-time updates on transcription status via WebSockets
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requirements
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- Docker and Docker Compose
+- OpenAI API key for Whisper API access
 
-## Learning Laravel
+## Setup Instructions
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 1. Clone the Repository
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+```bash
+git clone <repository-url>
+cd speech-to-text
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 2. Environment Configuration
 
-## Laravel Sponsors
+Copy the example environment file and update it with your settings:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+cp .env.example .env
+```
 
-### Premium Partners
+Make sure to set your OpenAI API key in the `.env` file:
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```
+OPENAI_API_KEY=your-api-key-here
+```
 
-## Contributing
+### 3. Start the Application with Laravel Sail
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+./vendor/bin/sail up -d
+```
 
-## Code of Conduct
+This command will start all the necessary Docker containers:
+- Laravel application (PHP 8.4)
+- MySQL database
+- Redis for caching and queues
+- Queue worker for processing transcriptions
+- Reverb for WebSockets
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### 4. Install Dependencies and Run Migrations
 
-## Security Vulnerabilities
+```bash
+./vendor/bin/sail composer install
+./vendor/bin/sail artisan migrate
+./vendor/bin/sail npm install
+./vendor/bin/sail npm run dev
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### 5. Access the Application
+
+Open your browser and navigate to:
+
+```
+http://localhost
+```
+
+## Usage
+
+1. Click the "Start Transcription" button to begin recording
+2. Speak into your microphone
+3. The application will automatically detect speech segments and process them
+4. View transcriptions in the sidebar as they are processed
+5. Click on audio controls to replay recorded segments
+
+## Technical Details
+
+- Built with Laravel PHP framework
+- Uses Laravel Octane with FrankenPHP for improved performance
+- Processes audio transcriptions asynchronously using Laravel queues
+- Leverages OpenAI's Whisper API for accurate speech-to-text conversion
+- Real-time updates via Laravel Reverb WebSockets
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+[MIT License](LICENSE)
