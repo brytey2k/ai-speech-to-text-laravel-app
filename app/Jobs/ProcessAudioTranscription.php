@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Enums\TranscriptionStatus;
 use App\Events\TranscriptionCompleted;
+use App\Events\TranscriptionFailed;
+use App\Events\TranscriptionInProgress;
 use App\Repositories\AudioTranscriptionRepository;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -40,6 +43,16 @@ class ProcessAudioTranscription implements ShouldQueue
             return;
         }
 
+        // Update status to in progress
+        $audioTranscriptionRepository->update($audioTranscription, [
+            'status' => TranscriptionStatus::IN_PROGRESS,
+        ]);
+
+        // Dispatch the transcription in progress event
+        event(new TranscriptionInProgress(
+            segmentId: $this->audioTranscriptionId,
+        ));
+
         // Get the file path
         $filePath = $audioTranscription->file_path;
 
@@ -69,9 +82,10 @@ class ProcessAudioTranscription implements ShouldQueue
             if ($response->successful()) {
                 $transcription = $response->json('text');
 
-                // Update the transcription field
+                // Update the transcription field and set status to success
                 $audioTranscriptionRepository->update($audioTranscription, [
                     'transcription' => $transcription,
+                    'status' => TranscriptionStatus::SUCCESS,
                 ]);
 
                 // Broadcast the transcription completed event
@@ -82,6 +96,16 @@ class ProcessAudioTranscription implements ShouldQueue
 
                 Log::info('Audio transcription completed', ['id' => $this->audioTranscriptionId]);
             } else {
+                // Update status to failed
+                $audioTranscriptionRepository->update($audioTranscription, [
+                    'status' => TranscriptionStatus::FAILED,
+                ]);
+
+                // Dispatch the transcription failed event
+                event(new TranscriptionFailed(
+                    segmentId: $this->audioTranscriptionId,
+                ));
+
                 Log::error('Failed to transcribe audio', [
                     'id' => $this->audioTranscriptionId,
                     'status' => $response->status(),
@@ -89,9 +113,49 @@ class ProcessAudioTranscription implements ShouldQueue
                 ]);
             }
         } catch (\Exception $e) {
+            // Update status to failed
+            $audioTranscriptionRepository->update($audioTranscription, [
+                'status' => TranscriptionStatus::FAILED,
+            ]);
+
+            // Dispatch the transcription failed event
+            event(new TranscriptionFailed(
+                segmentId: $this->audioTranscriptionId,
+            ));
+
             Log::error('Exception while transcribing audio', [
                 'id' => $this->audioTranscriptionId,
                 'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Handle a job failure.
+     *
+     * @param \Throwable $exception
+     *
+     * @return void
+     */
+    public function failed(\Throwable $exception): void
+    {
+        $audioTranscriptionRepository = app(AudioTranscriptionRepository::class);
+        $audioTranscription = $audioTranscriptionRepository->findById($this->audioTranscriptionId);
+
+        if ($audioTranscription) {
+            // Update status to failed
+            $audioTranscriptionRepository->update($audioTranscription, [
+                'status' => TranscriptionStatus::FAILED,
+            ]);
+
+            // Dispatch the transcription failed event
+            event(new TranscriptionFailed(
+                segmentId: $this->audioTranscriptionId,
+            ));
+
+            Log::error('Job failed while processing audio transcription', [
+                'id' => $this->audioTranscriptionId,
+                'message' => $exception->getMessage(),
             ]);
         }
     }

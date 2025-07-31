@@ -1,8 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Unit\Jobs;
 
 use App\Events\TranscriptionCompleted;
+use App\Events\TranscriptionFailed;
+use App\Events\TranscriptionInProgress;
 use App\Jobs\ProcessAudioTranscription;
 use App\Models\AudioTranscription;
 use App\Repositories\AudioTranscriptionRepository;
@@ -55,11 +59,11 @@ class ProcessAudioTranscriptionTest extends TestCase
             'transcription' => 'This is a test transcription',
         ]);
 
-        // Assert the event was dispatched
-        Event::assertDispatched(TranscriptionCompleted::class, function ($event) use ($audioTranscription) {
-            return $event->segmentId === $audioTranscription->id &&
-                   $event->transcription === 'This is a test transcription';
-        });
+        // Assert the events were dispatched
+        Event::assertDispatched(TranscriptionInProgress::class, static fn($event) => $event->segmentId === $audioTranscription->id);
+
+        Event::assertDispatched(TranscriptionCompleted::class, static fn($event) => $event->segmentId === $audioTranscription->id
+                   && $event->transcription === 'This is a test transcription');
     }
 
     public function test_handle_logs_error_when_audio_transcription_not_found(): void
@@ -123,5 +127,47 @@ class ProcessAudioTranscriptionTest extends TestCase
         // Execute the job
         $job = new ProcessAudioTranscription($audioTranscription->id);
         $job->handle(app(AudioTranscriptionRepository::class));
+
+        // Assert the TranscriptionInProgress event was dispatched
+        Event::assertDispatched(TranscriptionInProgress::class, static fn($event) => $event->segmentId === $audioTranscription->id);
+
+        // Assert the TranscriptionFailed event was dispatched
+        Event::assertDispatched(TranscriptionFailed::class, static fn($event) => $event->segmentId === $audioTranscription->id);
+    }
+
+    public function test_failed_method_updates_status_to_failed(): void
+    {
+        // Create a test audio file
+        $filePath = 'test_audio.mp3';
+        Storage::disk('public')->put($filePath, 'fake audio content');
+
+        // Create a test audio transcription record
+        $audioTranscription = AudioTranscription::factory()->create([
+            'file_path' => $filePath,
+            'transcription' => null,
+        ]);
+
+        // Create the job
+        $job = new ProcessAudioTranscription($audioTranscription->id);
+
+        // Mock the Log facade
+        Log::shouldReceive('error')
+            ->once()
+            ->with('Job failed while processing audio transcription', [
+                'id' => $audioTranscription->id,
+                'message' => 'Test exception',
+            ]);
+
+        // Call the failed method directly
+        $job->failed(new \Exception('Test exception'));
+
+        // Assert the status was updated to FAILED
+        $this->assertDatabaseHas('audio_transcriptions', [
+            'id' => $audioTranscription->id,
+            'status' => 'F', // FAILED status
+        ]);
+
+        // Assert the TranscriptionFailed event was dispatched
+        Event::assertDispatched(TranscriptionFailed::class, static fn($event) => $event->segmentId === $audioTranscription->id);
     }
 }

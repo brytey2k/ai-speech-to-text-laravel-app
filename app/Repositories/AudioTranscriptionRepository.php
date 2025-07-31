@@ -10,6 +10,17 @@ use Illuminate\Database\Eloquent\Collection;
 class AudioTranscriptionRepository
 {
     /**
+     * Get all transcriptions
+     *
+     * @return Collection<int, AudioTranscription>
+     */
+    public function getAllTranscriptions(): Collection
+    {
+        return AudioTranscription::orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    /**
      * Get all transcriptions that have been completed
      *
      * @return Collection<int, AudioTranscription>

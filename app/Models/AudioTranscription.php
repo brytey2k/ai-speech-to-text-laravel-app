@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\TranscriptionStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +14,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $file_path
  * @property string|null $transcription
+ * @property TranscriptionStatus $status
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
@@ -38,5 +40,15 @@ class AudioTranscription extends Model
     protected $fillable = [
         'file_path',
         'transcription',
+        'status',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'status' => TranscriptionStatus::class,
     ];
 }

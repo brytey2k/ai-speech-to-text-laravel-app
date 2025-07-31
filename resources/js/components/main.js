@@ -4,7 +4,13 @@
 
 import { setupWebSocketListener } from './websocket';
 import { createVADController } from './vad';
-import { updateVADStatus, createAudioBox, updateAudioBoxWithTranscription } from './ui';
+import {
+    updateVADStatus,
+    createAudioBox,
+    updateAudioBoxWithTranscription,
+    updateAudioBoxInProgress,
+    updateAudioBoxFailed
+} from './ui';
 import { initWaveSurfer, checkMicrophoneAvailability, sendAudioToAPI } from './recorder';
 
 /**
@@ -24,7 +30,11 @@ export const initAudioTranscriber = async () => {
     let vadController = null;
 
     // Set up WebSocket listener for transcription results
-    setupWebSocketListener(updateAudioBoxWithTranscription);
+    setupWebSocketListener({
+        updateCallback: updateAudioBoxWithTranscription,
+        inProgressCallback: updateAudioBoxInProgress,
+        failedCallback: updateAudioBoxFailed
+    });
 
     // Setup event handlers
     const setupEventHandlers = () => {

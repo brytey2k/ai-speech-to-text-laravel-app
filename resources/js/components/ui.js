@@ -74,15 +74,15 @@ export const createAudioBox = (segmentId, audioBlob) => {
     dateElement.textContent = currentDate.toLocaleDateString() + ' ' +
                              currentDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
-    // Add status indicator
-    const status = document.createElement('div');
-    status.className = 'bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-2 mb-3';
-    status.textContent = 'Processing...';
+    // Add status badge (similar to the one in index.blade.php)
+    const statusBadge = document.createElement('div');
+    statusBadge.className = 'absolute top-2 left-2 text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-800';
+    statusBadge.textContent = 'Pending';
 
     // Add transcription container (initially empty)
     const transcription = document.createElement('div');
-    transcription.className = 'mb-4 text-gray-800';
-    transcription.innerHTML = '<em>Waiting for transcription...</em>';
+    transcription.className = 'mb-4 text-gray-800 mt-6';
+    transcription.innerHTML = '<em>Waiting to be processed...</em>';
 
     // Add audio element (now below the transcription)
     const audio = document.createElement('audio');
@@ -92,7 +92,7 @@ export const createAudioBox = (segmentId, audioBlob) => {
 
     // Assemble the box
     cardBody.appendChild(dateElement);
-    cardBody.appendChild(status);
+    cardBody.appendChild(statusBadge);
     cardBody.appendChild(transcription);
     cardBody.appendChild(audio);
     box.appendChild(cardBody);
@@ -123,17 +123,61 @@ export const updateAudioBoxWithTranscription = (segmentId, transcriptionText) =>
     const audioBox = document.querySelector(`#audio-boxes-wrapper [data-segment-id="${segmentId}"]`);
     if (!audioBox) return;
 
-    // Update status
-    const status = audioBox.querySelector('[class^="bg-blue-100"]');
-    if (status) {
-        status.className = 'bg-green-100 border-l-4 border-green-500 text-green-700 p-2 mb-3';
-        status.textContent = 'Transcription complete';
+    // Update status badge
+    const statusBadge = audioBox.querySelector('.absolute.top-2.left-2');
+    if (statusBadge) {
+        statusBadge.className = 'absolute top-2 left-2 text-xs px-2 py-1 rounded-full bg-green-100 text-green-800';
+        statusBadge.textContent = 'Success';
     }
 
     // Update transcription
     const transcription = audioBox.querySelector('.mb-4');
     if (transcription) {
         transcription.textContent = transcriptionText;
+    }
+};
+
+/**
+ * Updates an audio box to show in-progress status
+ * @param {string} segmentId - The ID of the audio segment
+ */
+export const updateAudioBoxInProgress = (segmentId) => {
+    const audioBox = document.querySelector(`#audio-boxes-wrapper [data-segment-id="${segmentId}"]`);
+    if (!audioBox) return;
+
+    // Update status badge
+    const statusBadge = audioBox.querySelector('.absolute.top-2.left-2');
+    if (statusBadge) {
+        statusBadge.className = 'absolute top-2 left-2 text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800';
+        statusBadge.textContent = 'In Progress';
+    }
+
+    // Update transcription
+    const transcription = audioBox.querySelector('.mb-4');
+    if (transcription) {
+        transcription.innerHTML = '<em>Transcription in progress...</em>';
+    }
+};
+
+/**
+ * Updates an audio box to show failed status
+ * @param {string} segmentId - The ID of the audio segment
+ */
+export const updateAudioBoxFailed = (segmentId) => {
+    const audioBox = document.querySelector(`#audio-boxes-wrapper [data-segment-id="${segmentId}"]`);
+    if (!audioBox) return;
+
+    // Update status badge
+    const statusBadge = audioBox.querySelector('.absolute.top-2.left-2');
+    if (statusBadge) {
+        statusBadge.className = 'absolute top-2 left-2 text-xs px-2 py-1 rounded-full bg-red-100 text-red-800';
+        statusBadge.textContent = 'Failed';
+    }
+
+    // Update transcription
+    const transcription = audioBox.querySelector('.mb-4');
+    if (transcription) {
+        transcription.innerHTML = '<em>Transcription failed</em>';
     }
 };
 

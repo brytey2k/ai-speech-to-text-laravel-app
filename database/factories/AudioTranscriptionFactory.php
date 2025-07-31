@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Factories;
 
 use App\Models\AudioTranscription;
@@ -28,9 +30,7 @@ class AudioTranscriptionFactory extends Factory
             'file_path' => 'speech_segments/' . $this->faker->uuid() . '.mp3',
             'transcription' => $this->faker->optional(0.7)->paragraph(),
             'created_at' => $this->faker->dateTimeBetween('-1 month', 'now'),
-            'updated_at' => function (array $attributes) {
-                return $this->faker->dateTimeBetween($attributes['created_at'], 'now');
-            },
+            'updated_at' => fn(array $attributes) => $this->faker->dateTimeBetween($attributes['created_at'], 'now'),
         ];
     }
 
@@ -41,7 +41,7 @@ class AudioTranscriptionFactory extends Factory
      */
     public function completed(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'transcription' => $this->faker->paragraph(),
         ]);
     }
@@ -53,7 +53,7 @@ class AudioTranscriptionFactory extends Factory
      */
     public function pending(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(static fn(array $attributes) => [
             'transcription' => null,
         ]);
     }
