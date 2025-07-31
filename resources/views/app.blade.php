@@ -9,9 +9,9 @@
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
-<body style="background-image: url('{{ asset('images/background.png') }}');" class="bg-no-repeat bg-cover bg-center h-screen overflow-hidden">
+<body style="background-image: url('{{ asset('images/background.png') }}');" class="bg-no-repeat bg-fixed bg-cover bg-center min-h-screen md:overflow-hidden">
     <!-- Top Navigation Bar -->
-    <nav class="bg-white shadow w-full">
+    <nav class="bg-white shadow w-full fixed top-0 left-0 right-0 z-50">
         <div class="w-full px-6 md:px-12 py-2 flex justify-between items-center">
             <div class="text-lg font-semibold">
             </div>
@@ -38,7 +38,7 @@
         </div>
     </nav>
 
-    <div class="w-full h-full px-6 md:px-12 py-0">
+    <div class="w-full min-h-[calc(100vh-56px)] px-6 md:px-12 py-0 flex items-center mt-14">
         @yield('content')
     </div>
 

@@ -10,14 +10,14 @@ use Illuminate\Support\Facades\Storage;
     @php
         $hasTranscriptions = count($transcriptions) > 0;
     @endphp
-    <div class="flex flex-col md:flex-row md:space-x-4 h-screen">
-        <!-- Main content area (100% when no transcripts, 75% when transcripts exist) -->
-        <div id="main-content-area" class="w-full {{ $hasTranscriptions ? 'md:w-3/4' : 'md:w-full' }} overflow-y-auto p-4 flex flex-col items-center justify-center h-full space-y-8 transition-all duration-500 ease-in-out">
-            <h1 class="text-center">Welcome to Darli</h1>
+    <div class="flex flex-col w-full">
+        <!-- Main content area (100% when no transcripts, 75% on md screens when transcripts exist) -->
+        <div id="main-content-area" class="w-full {{ $hasTranscriptions ? 'md:w-3/4' : 'md:w-full' }} overflow-y-auto p-4 pt-24 md:pt-4 flex flex-col items-center justify-center {{ $hasTranscriptions ? 'h-1/2 md:h-full md:flex md:items-center md:justify-center' : 'h-full' }} space-y-8 transition-all duration-500 ease-in-out">
+            <h1 class="text-center mt-6 md:mt-0">Welcome to Darli</h1>
 
-            <div id="wavesurfer-container" class="w-full flex flex-col items-center space-y-8">
+            <div id="wavesurfer-container" class="w-full flex flex-col items-center space-y-8 relative z-10 mt-6">
                 <!-- Waveform visualization -->
-                <div id="waveform" class="w-1/2 mx-auto"></div>
+                <div id="waveform" class="w-1/2 mx-auto relative mt-4"></div>
 
                 <!-- VAD status message -->
                 <div id="vad-status" class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 hidden">Listening for speech...</div>
@@ -36,9 +36,9 @@ use Illuminate\Support\Facades\Storage;
             </div>
         </div>
 
-        <!-- Transcripts area (25% on larger screens, hidden when no transcripts) -->
-        <div id="transcript-area" class="w-full md:w-1/4 p-4 {{ !$hasTranscriptions ? 'md:hidden' : '' }} transition-all duration-500 ease-in-out">
-            <div id="audio-boxes-container" class="bg-white p-4 rounded-lg shadow-md h-[85vh] overflow-y-auto">
+        <!-- Transcripts area (full width on small screens, 25% width on md screens, hidden when no transcripts) -->
+        <div id="transcript-area" class="w-full {{ $hasTranscriptions ? 'h-1/2' : 'h-0' }} md:w-1/4 md:h-full p-4 pt-20 md:pt-4 pb-16 {{ !$hasTranscriptions ? 'hidden md:hidden' : '' }} transition-all duration-500 ease-in-out md:fixed md:right-0 md:top-14 md:bottom-8">
+            <div id="audio-boxes-container" class="bg-white p-4 rounded-lg shadow-md h-full overflow-y-auto">
                 <h3 class="mb-3">Transcripts</h3>
                 <div id="audio-boxes-wrapper" class="space-y-4 pt-2">
                     @forelse($transcriptions as $transcription)
@@ -264,10 +264,41 @@ use Illuminate\Support\Facades\Storage;
                             mainContentArea.classList.remove('md:w-full');
                             mainContentArea.classList.add('md:w-3/4');
 
-                            // Show transcript area
-                            transcriptArea.classList.remove('md:hidden');
+                            // Add height classes for responsive layout
+                            mainContentArea.classList.add('h-1/2', 'md:h-full', 'md:flex', 'md:items-center', 'md:justify-center');
 
-                            console.log('Layout updated: Main content area is now 75%, transcript area is now visible');
+                            // Ensure top padding is maintained for navbar
+                            if (!mainContentArea.classList.contains('pt-24')) {
+                                mainContentArea.classList.add('pt-24');
+                            }
+                            if (!mainContentArea.classList.contains('md:pt-4')) {
+                                mainContentArea.classList.add('md:pt-4');
+                            }
+
+                            // Show transcript area and set its height
+                            transcriptArea.classList.remove('md:hidden', 'hidden');
+                            transcriptArea.classList.add('h-1/2', 'pb-16', 'pt-20', 'md:pt-4', 'md:bottom-8', 'md:top-14', 'md:fixed');
+                            transcriptArea.classList.remove('h-0', 'md:absolute');
+
+                            // Update the audio boxes container to match the static HTML
+                            const audioBoxesContainer = document.getElementById('audio-boxes-container');
+                            if (audioBoxesContainer) {
+                                // Ensure consistent overflow behavior with the static HTML
+                                audioBoxesContainer.classList.remove('md:overflow-auto', 'overflow-auto');
+                                audioBoxesContainer.classList.add('overflow-y-auto');
+                            }
+
+                            // Ensure the page scrolls to show the transcript area on mobile
+                            if (window.innerWidth < 768) {
+                                setTimeout(() => {
+                                    window.scrollTo({
+                                        top: document.body.scrollHeight,
+                                        behavior: 'smooth'
+                                    });
+                                }, 100);
+                            }
+
+                            console.log('Layout updated: Responsive layout applied for transcripts');
                         }, 50);
                     }
                 }
