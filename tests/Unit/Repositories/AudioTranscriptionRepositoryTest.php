@@ -62,9 +62,9 @@ class AudioTranscriptionRepositoryTest extends TestCase
         $completedTranscriptions = $this->repository->getCompletedTranscriptions();
 
         $this->assertCount(3, $completedTranscriptions);
-        $this->assertEquals('Third transcription', $completedTranscriptions[0]->transcription);
-        $this->assertEquals('Second transcription', $completedTranscriptions[1]->transcription);
-        $this->assertEquals('First transcription', $completedTranscriptions[2]->transcription);
+        $this->assertEquals('Third transcription', $completedTranscriptions[0]?->transcription);
+        $this->assertEquals('Second transcription', $completedTranscriptions[1]?->transcription);
+        $this->assertEquals('First transcription', $completedTranscriptions[2]?->transcription);
     }
 
     public function test_find_by_id_returns_correct_transcription(): void
@@ -96,7 +96,6 @@ class AudioTranscriptionRepositoryTest extends TestCase
 
         $audioTranscription = $this->repository->create($data);
 
-        $this->assertInstanceOf(AudioTranscription::class, $audioTranscription);
         $this->assertEquals('test/path/audio.mp3', $audioTranscription->file_path);
         $this->assertNull($audioTranscription->transcription);
         $this->assertDatabaseHas('audio_transcriptions', $data);

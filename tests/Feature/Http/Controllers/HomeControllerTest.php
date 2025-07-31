@@ -8,6 +8,7 @@ use App\Jobs\ProcessAudioTranscription;
 use App\Models\AudioTranscription;
 use App\Repositories\AudioTranscriptionRepository;
 use App\Services\UuidGenerator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
@@ -44,6 +45,7 @@ class HomeControllerTest extends TestCase
         $response->assertViewHas('transcriptions');
 
         // Verify that all transcriptions are returned
+        /** @var Collection<int, AudioTranscription> $transcriptions */
         $transcriptions = $response->viewData('transcriptions');
         $this->assertCount(5, $transcriptions);
         $this->assertInstanceOf(AudioTranscription::class, $transcriptions->first());
