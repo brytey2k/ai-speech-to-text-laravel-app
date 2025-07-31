@@ -53,13 +53,14 @@ class HomeController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Speech segment received successfully',
-                'path' => $path,
                 'id' => $audioTranscription->id,
             ]);
         } catch (\Exception $e) {
+            report($e);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error processing speech segment: ' . $e->getMessage(),
+                'message' => 'an error occurred while processing speech segment.',
             ], 500);
         }
     }

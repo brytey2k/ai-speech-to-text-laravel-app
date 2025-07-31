@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
@@ -28,6 +29,7 @@ use Illuminate\Support\Carbon;
  */
 class AudioTranscription extends Model
 {
+    use HasFactory;
     /**
      * The attributes that are mass assignable.
      *

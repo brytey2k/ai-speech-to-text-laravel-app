@@ -22,7 +22,7 @@ class ProcessAudioTranscription implements ShouldQueue
      * @param int $audioTranscriptionId
      */
     public function __construct(
-        protected int $audioTranscriptionId,
+        public int $audioTranscriptionId,
     ) {}
 
     /**
