@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Jobs;
 
+use App\Enums\TranscriptionStatus;
 use App\Events\TranscriptionCompleted;
 use App\Events\TranscriptionFailed;
 use App\Events\TranscriptionInProgress;
@@ -162,9 +163,9 @@ class ProcessAudioTranscriptionTest extends TestCase
         $job->failed(new \Exception('Test exception'));
 
         // Assert the status was updated to FAILED
-        $this->assertDatabaseHas('audio_transcriptions', [
+        $this->assertDatabaseHas(AudioTranscription::class, [
             'id' => $audioTranscription->id,
-            'status' => 'F', // FAILED status
+            'status' => TranscriptionStatus::FAILED->value, // FAILED status
         ]);
 
         // Assert the TranscriptionFailed event was dispatched

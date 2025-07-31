@@ -27,20 +27,16 @@ class HandleSpeechSegment
     public function execute(SpeechSegmentRequest $request): array
     {
         try {
-            // Get the audio file from the request
             $audioFile = $request->file('audio');
 
-            // Generate a unique filename
             $filename = 'speech_segment_' . $this->uuidGenerator->generate() . '.' . $audioFile->getClientOriginalExtension();
+            $folderPath = now()->format('Y/m/d/H');
 
-            // Store the file
-            $path = $audioFile->storeAs('speech_segments', $filename, 'public');
+            $path = $audioFile->storeAs("speech_segments/{$folderPath}", $filename, 'public');
 
-            // Create a record in the database
             $audioTranscription = $this->audioTranscriptionRepository->create([
                 'file_path' => $path,
                 'status' => TranscriptionStatus::PENDING,
-                // transcription will be null initially
             ]);
 
             // Dispatch the job to process the audio file
