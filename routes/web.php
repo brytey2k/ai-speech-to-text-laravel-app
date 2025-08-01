@@ -8,4 +8,6 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // API endpoint for speech segments
-Route::post('/api/speech-segments', [HomeController::class, 'handleSpeechSegment'])->name('speech.segments');
+Route::post('/speech-segments', [HomeController::class, 'handleSpeechSegment'])
+    ->middleware('throttle:5,1')  // Limit to 5 requests per minute
+    ->name('speech.segments');

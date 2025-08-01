@@ -67,7 +67,7 @@ class HomeControllerTest extends TestCase
         // Create a fake audio file
         $file = UploadedFile::fake()->create('audio.mp3', 100);
 
-        $response = $this->postJson('/api/speech-segments', [
+        $response = $this->postJson('/speech-segments', [
             'audio' => $file,
         ]);
 
@@ -103,7 +103,7 @@ class HomeControllerTest extends TestCase
         $file = UploadedFile::fake()->create('audio.mp3', 100);
 
         // Make the request
-        $response = $this->postJson('/api/speech-segments', [
+        $response = $this->postJson('/speech-segments', [
             'audio' => $file,
         ]);
 

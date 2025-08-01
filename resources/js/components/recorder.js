@@ -102,7 +102,7 @@ export const sendAudioToAPI = async (audioData, updateStatus, createAudioBox) =>
         formData.append('audio', wavBlob, 'recording.wav');
 
         // Send the audio data to the API endpoint
-        const response = await axios.post('/api/speech-segments', formData, {
+        const response = await axios.post('/speech-segments', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
