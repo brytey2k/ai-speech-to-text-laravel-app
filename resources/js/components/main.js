@@ -40,9 +40,8 @@ export const initAudioTranscriber = async () => {
     const setupEventHandlers = () => {
         const startBtn = document.getElementById('record-start');
         const stopBtn = document.getElementById('record-stop');
-        const timeDisplay = document.getElementById('record-time');
 
-        if (!startBtn || !stopBtn || !timeDisplay) return;
+        if (!startBtn || !stopBtn) return;
 
         // Start recording
         startBtn.addEventListener('click', async () => {
@@ -150,20 +149,9 @@ export const initAudioTranscriber = async () => {
             stopBtn.disabled = true;
         });
 
-        // Update time display
-        record.on('record-progress', (duration) => {
-            // Convert duration to seconds if it's in milliseconds
-            const durationInSeconds = duration > 1000 ? duration / 1000 : duration;
-            timeDisplay.textContent = AudioHelpers.formatTime(durationInSeconds);
-        });
-
         // Handle recording end
         record.on('record-end', (blob) => {
             console.log('Recording finished');
-            // Get duration and convert to seconds if it's in milliseconds
-            const duration = record.getDuration();
-            const durationInSeconds = duration > 1000 ? duration / 1000 : duration;
-            timeDisplay.textContent = AudioHelpers.formatTime(durationInSeconds);
         });
     };
 

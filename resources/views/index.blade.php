@@ -29,7 +29,6 @@
                         <button id="record-start" class="hover:bg-gray-800 text-white font-bold py-2 px-4 rounded mr-2"
                                 style="background-color: #0D0E10;">Start Transcription
                         </button>
-                        <span id="record-time" class="ml-2 self-center">00:00:00</span>
                     </div>
                     <button id="record-stop"
                             class="bg-white hover:bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded mr-2 hidden mt-4 md:mt-0 md:fixed md:bottom-8 md:left-1/4 md:transform md:-translate-x-1/2 xl:left-[37.5%]"
