@@ -12,10 +12,25 @@ Darli is a web application that provides real-time speech-to-text transcription 
 - **Status Tracking**: Monitor the status of each transcription (pending, in progress, success, failed)
 - **Real-time Updates**: Receive real-time updates on transcription status via WebSockets
 
+## Tech Stack
+
+- **Backend**: Laravel 12 (PHP 8.2+). Project uses PHP 8.4 from docker compose setup.
+- **Frontend**: JavaScript with Tailwind CSS
+- **Database**: MySQL
+- **Caching & Queues**: Redis
+- **WebSockets**: Laravel Reverb
+- **Performance**: Laravel Octane with FrankenPHP
+- **Containerization**: Docker with Laravel Sail
+- **Key Libraries**:
+  - [@ricky0123/vad-web](https://github.com/ricky0123/vad-web) - Voice Activity Detection
+  - [wavesurfer.js](https://wavesurfer-js.org/) - Audio waveform visualization
+  - [Laravel Echo](https://laravel.com/docs/broadcasting#client-side-installation) - WebSocket client
+
 ## Requirements
 
 - Docker and Docker Compose
 - OpenAI API key for Whisper API access
+- Git
 
 ## Setup Instructions
 
@@ -34,20 +49,54 @@ Copy the example environment file and update it with your settings:
 cp .env.example .env
 ```
 
-Make sure to set your OpenAI API key in the `.env` file:
+Required environment variables to configure:
 
 ```
+# Application settings
+APP_URL=http://localhost
+
+# Database settings
+DB_CONNECTION=mysql
+DB_HOST=mysql
+DB_PORT=3306
+DB_DATABASE=speech_to_text
+DB_USERNAME=sail
+DB_PASSWORD=password
+
+# Redis settings
+REDIS_HOST=redis
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+# Queue settings
+QUEUE_CONNECTION=redis
+
+# OpenAI API settings
 OPENAI_API_KEY=your-api-key-here
+
+# Reverb WebSocket settings
+REVERB_APP_ID=123654
+REVERB_APP_KEY="aDummyKeyForDevelopmentPurposes"
+REVERB_APP_SECRET="aDummySecretForDevelopmentPurposes"
+REVERB_HOST="localhost"
+REVERB_PORT=8080
+REVERB_SCHEME=http
+
+VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
+VITE_REVERB_HOST="localhost"
+VITE_REVERB_PORT="${REVERB_PORT}"
+VITE_REVERB_SCHEME="${REVERB_SCHEME}"
 ```
 
 ### 3. Start the Application with Laravel Sail
 
 ```bash
+# Start all containers
 ./vendor/bin/sail up -d
 ```
 
 This command will start all the necessary Docker containers:
-- Laravel application (PHP 8.4)
+- Laravel application (PHP 8.2+)
 - MySQL database
 - Redis for caching and queues
 - Queue worker for processing transcriptions
@@ -56,10 +105,20 @@ This command will start all the necessary Docker containers:
 ### 4. Install Dependencies and Run Migrations
 
 ```bash
+# Install PHP dependencies
 ./vendor/bin/sail composer install
+
+# Run database migrations
 ./vendor/bin/sail artisan migrate
+
+# Install JavaScript dependencies
 ./vendor/bin/sail npm install
+
+# Build frontend assets (development mode)
 ./vendor/bin/sail npm run dev
+
+# Or for production build
+./vendor/bin/sail npm run build
 ```
 
 ### 5. Access the Application
@@ -70,6 +129,21 @@ Open your browser and navigate to:
 http://localhost
 ```
 
+## Development Workflow
+
+For local development, you can use the following commands:
+
+```bash
+# Run tests
+./vendor/bin/sail composer test
+
+# Code linting
+./vendor/bin/sail composer pint
+
+# Static analysis
+./vendor/bin/sail composer phpstan
+```
+
 ## Usage
 
 1. Click the "Start Transcription" button to begin recording
@@ -77,15 +151,3 @@ http://localhost
 3. The application will automatically detect speech segments and process them
 4. View transcriptions in the sidebar as they are processed
 5. Click on audio controls to replay recorded segments
-
-## Technical Details
-
-- Built with Laravel PHP framework
-- Uses Laravel Octane with FrankenPHP for improved performance
-- Processes audio transcriptions asynchronously using Laravel queues
-- Leverages OpenAI's Whisper API for accurate speech-to-text conversion
-- Real-time updates via Laravel Reverb WebSockets
-
-## License
-
-[MIT License](LICENSE)
