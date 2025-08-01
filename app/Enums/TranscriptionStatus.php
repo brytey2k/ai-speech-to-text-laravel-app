@@ -20,4 +20,9 @@ enum TranscriptionStatus: string
             self::FAILED => 'Failed',
         };
     }
+
+    public function canBeResubmitted(): bool
+    {
+        return $this === self::FAILED;
+    }
 }

@@ -8,14 +8,17 @@ use App\Enums\TranscriptionStatus;
 use App\Events\TranscriptionCompleted;
 use App\Events\TranscriptionFailed;
 use App\Events\TranscriptionInProgress;
+use App\Exceptions\AudioFileNotFoundException;
+use App\Exceptions\AudioTranscriptionNotFoundException;
+use App\Exceptions\AudioTranscriptionNotInFailedStateException;
 use App\Repositories\AudioTranscriptionRepository;
+use App\Traits\SendAudioForTranscription;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -25,6 +28,7 @@ class ResubmitFailedTranscription implements ShouldQueue, ShouldBeUnique
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+    use SendAudioForTranscription;
 
     /**
      * The unique ID of the job.
@@ -49,24 +53,28 @@ class ResubmitFailedTranscription implements ShouldQueue, ShouldBeUnique
      * Execute the job.
      *
      * @param AudioTranscriptionRepository $audioTranscriptionRepository
+     *
+     * @throws AudioTranscriptionNotFoundException|AudioTranscriptionNotInFailedStateException|AudioFileNotFoundException
      */
     public function handle(AudioTranscriptionRepository $audioTranscriptionRepository): void
     {
+        // TODO: REFACTOR THIS JOB IN ADDITION TO THE PROCESSING JOB
+
         // Retrieve the audio transcription record
         $audioTranscription = $audioTranscriptionRepository->findById($this->audioTranscriptionId);
 
         if (!$audioTranscription) {
             Log::error('Audio transcription not found for resubmission', ['id' => $this->audioTranscriptionId]);
-            return;
+            throw new AudioTranscriptionNotFoundException('Audio transcription not found for resubmission');
         }
 
         // Verify that the transcription is in a failed state
-        if ($audioTranscription->status !== TranscriptionStatus::FAILED) {
+        if (!$audioTranscription->status->canBeResubmitted()) {
             Log::info('Skipping resubmission as transcription is not in failed state', [
                 'id' => $this->audioTranscriptionId,
                 'status' => $audioTranscription->status->value,
             ]);
-            return;
+            throw new AudioTranscriptionNotInFailedStateException('Audio transcription is not in a failed state');
         }
 
         // Update status to in progress
@@ -95,19 +103,14 @@ class ResubmitFailedTranscription implements ShouldQueue, ShouldBeUnique
                 segmentId: $this->audioTranscriptionId,
             ));
 
-            return;
+            throw new AudioFileNotFoundException('Audio file not found for resubmission');
         }
 
         // Get the full path to the file
         $fullPath = Storage::disk('public')->path($filePath);
 
         try {
-            // Send the file to OpenAI's Whisper API
-            $response = Http::withToken(config()->string('services.openai.api_key'))
-                ->attach('file', file_get_contents($fullPath), basename($fullPath)) // @phpstan-ignore-line
-                ->post('https://api.openai.com/v1/audio/transcriptions', [
-                    'model' => 'whisper-1',
-                ]);
+            $response = $this->sendFileToTranscriptionService($fullPath);
 
             if ($response->successful()) {
                 $transcription = $response->json('text');

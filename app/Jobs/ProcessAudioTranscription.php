@@ -11,18 +11,18 @@ use App\Events\TranscriptionInProgress;
 use App\Exceptions\AudioTranscriptionNotFoundException;
 use App\Models\AudioTranscription;
 use App\Repositories\AudioTranscriptionRepository;
+use App\Traits\SendAudioForTranscription;
 use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class ProcessAudioTranscription implements ShouldQueue
 {
     use Queueable;
+    use SendAudioForTranscription;
 
     private AudioTranscriptionRepository $audioTranscriptionRepository;
 
@@ -64,7 +64,6 @@ class ProcessAudioTranscription implements ShouldQueue
         $fullPath = Storage::disk('public')->path($filePath);
 
         try {
-            // Send the file to OpenAI's Whisper API
             $response = $this->sendFileToTranscriptionService($fullPath);
 
             if (!$response->successful()) {
@@ -73,7 +72,9 @@ class ProcessAudioTranscription implements ShouldQueue
                 return;
             }
 
-            $this->handleSuccess($audioTranscription, $response->json('text'));
+            /** @var string $transcriptionText */
+            $transcriptionText = $response->json('text');
+            $this->handleSuccess($audioTranscription, $transcriptionText);
         } catch (\Exception $e) {
             $this->handleError($audioTranscription, 'Exception while transcribing audio', null, $e);
         }
@@ -135,7 +136,7 @@ class ProcessAudioTranscription implements ShouldQueue
         // Broadcast the transcription completed event
         event(new TranscriptionCompleted(
             segmentId: $this->audioTranscriptionId,
-            transcription: $transcriptionText, // @phpstan-ignore-line
+            transcription: $transcriptionText,
         ));
 
         Log::info('Audio transcription completed', ['id' => $this->audioTranscriptionId]);
@@ -144,7 +145,7 @@ class ProcessAudioTranscription implements ShouldQueue
     private function handleError(
         AudioTranscription $audioTranscription,
         string $errorLogMessage,
-        PromiseInterface|Response|null $response,
+        Response|null $response,
         \Throwable|null $throwable,
     ): void {
         $this->audioTranscriptionRepository->update($audioTranscription, [
@@ -187,21 +188,5 @@ class ProcessAudioTranscription implements ShouldQueue
         }
 
         return $audioTranscription;
-    }
-
-    /**
-     * @param string $fullPath
-     *
-     * @throws ConnectionException
-     *
-     * @return PromiseInterface|Response
-     */
-    private function sendFileToTranscriptionService(string $fullPath): PromiseInterface|Response
-    {
-        return Http::withToken(config()->string('services.openai.api_key'))
-            ->attach('file', file_get_contents($fullPath), basename($fullPath)) // @phpstan-ignore-line
-            ->post('https://api.openai.com/v1/audio/transcriptions', [
-                'model' => 'whisper-1',
-            ]);
     }
 }
