@@ -22,7 +22,7 @@ Darli is a web application that provides real-time speech-to-text transcription 
 - **Performance**: Laravel Octane with FrankenPHP
 - **Containerization**: Docker with Laravel Sail
 - **Key Libraries**:
-  - [@ricky0123/vad-web](https://github.com/ricky0123/vad-web) - Voice Activity Detection
+  - [@ricky0123/vad-web](https://github.com/ricky0123/vad) - Voice Activity Detection
   - [wavesurfer.js](https://wavesurfer-js.org/) - Audio waveform visualization
   - [Laravel Echo](https://laravel.com/docs/broadcasting#client-side-installation) - WebSocket client
 
