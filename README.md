@@ -73,7 +73,7 @@ REDIS_PORT=6379
 QUEUE_CONNECTION=redis
 
 # OpenAI API settings
-OPENAI_API_KEY=your-api-key-here
+OPEN_AI_WHISPER_API_KEY=your-api-key-here
 
 BROADCAST_CONNECTION=reverb
 
