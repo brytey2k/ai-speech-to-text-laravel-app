@@ -8,6 +8,7 @@ use App\Enums\TranscriptionStatus;
 use App\Events\TranscriptionCompleted;
 use App\Events\TranscriptionFailed;
 use App\Events\TranscriptionInProgress;
+use App\Exceptions\AudioTranscriptionNotFoundException;
 use App\Jobs\ProcessAudioTranscription;
 use App\Models\AudioTranscription;
 use App\Repositories\AudioTranscriptionRepository;
@@ -74,6 +75,8 @@ class ProcessAudioTranscriptionTest extends TestCase
             ->once()
             ->with('Audio transcription not found', ['id' => 999]);
 
+        $this->expectException(AudioTranscriptionNotFoundException::class);
+
         // Execute the job with a non-existent ID
         $job = new ProcessAudioTranscription(999);
         $job->handle(app(AudioTranscriptionRepository::class));
@@ -91,6 +94,8 @@ class ProcessAudioTranscriptionTest extends TestCase
         Log::shouldReceive('error')
             ->once()
             ->with('Audio file not found', ['path' => 'non_existent_file.mp3']);
+
+        $this->expectException(AudioTranscriptionNotFoundException::class);
 
         // Execute the job
         $job = new ProcessAudioTranscription($audioTranscription->id);

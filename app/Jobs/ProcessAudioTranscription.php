@@ -8,9 +8,14 @@ use App\Enums\TranscriptionStatus;
 use App\Events\TranscriptionCompleted;
 use App\Events\TranscriptionFailed;
 use App\Events\TranscriptionInProgress;
+use App\Exceptions\AudioTranscriptionNotFoundException;
+use App\Models\AudioTranscription;
 use App\Repositories\AudioTranscriptionRepository;
+use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -18,6 +23,8 @@ use Illuminate\Support\Facades\Storage;
 class ProcessAudioTranscription implements ShouldQueue
 {
     use Queueable;
+
+    private AudioTranscriptionRepository $audioTranscriptionRepository;
 
     /**
      * Create a new job instance.
@@ -32,19 +39,17 @@ class ProcessAudioTranscription implements ShouldQueue
      * Execute the job.
      *
      * @param AudioTranscriptionRepository $audioTranscriptionRepository
+     *
+     * @throws AudioTranscriptionNotFoundException|AudioTranscriptionNotFoundException
      */
     public function handle(AudioTranscriptionRepository $audioTranscriptionRepository): void
     {
-        // Retrieve the audio transcription record
-        $audioTranscription = $audioTranscriptionRepository->findById($this->audioTranscriptionId);
+        $this->setAudioTranscriptionRepository($audioTranscriptionRepository);
 
-        if (!$audioTranscription) {
-            Log::error('Audio transcription not found', ['id' => $this->audioTranscriptionId]);
-            return;
-        }
+        $audioTranscription = $this->getAudioTranscriptionRecord();
 
         // Update status to in progress
-        $audioTranscriptionRepository->update($audioTranscription, [
+        $this->audioTranscriptionRepository->update($audioTranscription, [
             'status' => TranscriptionStatus::IN_PROGRESS,
         ]);
 
@@ -55,71 +60,22 @@ class ProcessAudioTranscription implements ShouldQueue
 
         // Get the file path
         $filePath = $audioTranscription->file_path;
-
-        if (!Storage::disk('public')->exists($filePath)) {
-            Log::error('Audio file not found', ['path' => $filePath]);
-            return;
-        }
-
-        // Get the full path to the file
+        $this->ensureAudioFileExists($filePath);
         $fullPath = Storage::disk('public')->path($filePath);
 
         try {
             // Send the file to OpenAI's Whisper API
-            $response = Http::withToken(config()->string('services.openai.api_key'))
-                ->attach('file', file_get_contents($fullPath), basename($fullPath)) // @phpstan-ignore-line
-                ->post('https://api.openai.com/v1/audio/transcriptions', [
-                    'model' => 'whisper-1',
-                ]);
+            $response = $this->sendFileToTranscriptionService($fullPath);
 
-            if ($response->successful()) {
-                $transcription = $response->json('text');
+            if (!$response->successful()) {
+                $this->handleError($audioTranscription, 'Failed to transcribe audio', $response, null);
 
-                // Update the transcription field and set status to success
-                $audioTranscriptionRepository->update($audioTranscription, [
-                    'transcription' => $transcription,
-                    'status' => TranscriptionStatus::SUCCESS,
-                ]);
-
-                // Broadcast the transcription completed event
-                event(new TranscriptionCompleted(
-                    segmentId: $this->audioTranscriptionId,
-                    transcription: $transcription, // @phpstan-ignore-line
-                ));
-
-                Log::info('Audio transcription completed', ['id' => $this->audioTranscriptionId]);
-            } else {
-                // Update status to failed
-                $audioTranscriptionRepository->update($audioTranscription, [
-                    'status' => TranscriptionStatus::FAILED,
-                ]);
-
-                // Dispatch the transcription failed event
-                event(new TranscriptionFailed(
-                    segmentId: $this->audioTranscriptionId,
-                ));
-
-                Log::error('Failed to transcribe audio', [
-                    'id' => $this->audioTranscriptionId,
-                    'status' => $response->status(),
-                    'response' => $response->json(),
-                ]);
+                return;
             }
+
+            $this->handleSuccess($audioTranscription, $response->json('text'));
         } catch (\Exception $e) {
-            // Update status to failed
-            $audioTranscriptionRepository->update($audioTranscription, [
-                'status' => TranscriptionStatus::FAILED,
-            ]);
-
-            // Dispatch the transcription failed event
-            event(new TranscriptionFailed(
-                segmentId: $this->audioTranscriptionId,
-            ));
-
-            Log::error('Exception while transcribing audio', [
-                'id' => $this->audioTranscriptionId,
-                'message' => $e->getMessage(),
-            ]);
+            $this->handleError($audioTranscription, 'Exception while transcribing audio', null, $e);
         }
     }
 
@@ -151,5 +107,101 @@ class ProcessAudioTranscription implements ShouldQueue
                 'message' => $exception->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * @param string $filePath
+     *
+     * @throws AudioTranscriptionNotFoundException
+     */
+    private function ensureAudioFileExists(string $filePath): void
+    {
+        if (!Storage::disk('public')->exists($filePath)) {
+            Log::error('Audio file not found', ['path' => $filePath]);
+            throw new AudioTranscriptionNotFoundException('Audio file not found at path: ' . $filePath);
+        }
+    }
+
+    private function handleSuccess(
+        AudioTranscription $audioTranscription,
+        string $transcriptionText,
+    ): void {
+        // Update the transcription field and set status to success
+        $this->audioTranscriptionRepository->update($audioTranscription, [
+            'transcription' => $transcriptionText,
+            'status' => TranscriptionStatus::SUCCESS,
+        ]);
+
+        // Broadcast the transcription completed event
+        event(new TranscriptionCompleted(
+            segmentId: $this->audioTranscriptionId,
+            transcription: $transcriptionText, // @phpstan-ignore-line
+        ));
+
+        Log::info('Audio transcription completed', ['id' => $this->audioTranscriptionId]);
+    }
+
+    private function handleError(
+        AudioTranscription $audioTranscription,
+        string $errorLogMessage,
+        PromiseInterface|Response|null $response,
+        \Throwable|null $throwable,
+    ): void {
+        $this->audioTranscriptionRepository->update($audioTranscription, [
+            'status' => TranscriptionStatus::FAILED,
+        ]);
+
+        event(new TranscriptionFailed(
+            segmentId: $this->audioTranscriptionId,
+        ));
+
+        $context = [
+            'id' => $this->audioTranscriptionId,
+        ];
+        if ($throwable) {
+            $context['message'] = $throwable->getMessage();
+        }
+        if ($response) {
+            $context['status'] = $response->status();
+            $context['response'] = $response->json();
+        }
+
+        Log::error($errorLogMessage, $context);
+    }
+
+    private function setAudioTranscriptionRepository(AudioTranscriptionRepository $audioTranscriptionRepository): void
+    {
+        $this->audioTranscriptionRepository = $audioTranscriptionRepository;
+    }
+
+    /**
+     * @throws AudioTranscriptionNotFoundException
+     */
+    private function getAudioTranscriptionRecord(): AudioTranscription
+    {
+        $audioTranscription = $this->audioTranscriptionRepository->findById($this->audioTranscriptionId);
+
+        if (!$audioTranscription) {
+            Log::error('Audio transcription not found', ['id' => $this->audioTranscriptionId]);
+            throw new AudioTranscriptionNotFoundException('Audio transcription not found with ID: ' . $this->audioTranscriptionId);
+        }
+
+        return $audioTranscription;
+    }
+
+    /**
+     * @param string $fullPath
+     *
+     * @throws ConnectionException
+     *
+     * @return PromiseInterface|Response
+     */
+    private function sendFileToTranscriptionService(string $fullPath): PromiseInterface|Response
+    {
+        return Http::withToken(config()->string('services.openai.api_key'))
+            ->attach('file', file_get_contents($fullPath), basename($fullPath)) // @phpstan-ignore-line
+            ->post('https://api.openai.com/v1/audio/transcriptions', [
+                'model' => 'whisper-1',
+            ]);
     }
 }
