@@ -140,6 +140,14 @@ Open your browser and navigate to:
 ```
 http://localhost
 ```
+If the application is still not accessible from the browser, restart the Docker containers:
+
+```bash
+./vendor/bin/sail stop
+./vendor/bin/sail up -d
+```
+
+Then try accessing the application again at `http://localhost`.
 
 ## Development Workflow
 
