@@ -31,6 +31,7 @@ Darli is a web application that provides real-time speech-to-text transcription 
 - Docker and Docker Compose
 - OpenAI API key for Whisper API access
 - Git
+- PHP 8.4+ (only for initial `composer install` run to install laravel sail)
 
 ## Setup Instructions
 
@@ -74,11 +75,13 @@ QUEUE_CONNECTION=redis
 # OpenAI API settings
 OPENAI_API_KEY=your-api-key-here
 
+BROADCAST_CONNECTION=reverb
+
 # Reverb WebSocket settings
 REVERB_APP_ID=123654
 REVERB_APP_KEY="aDummyKeyForDevelopmentPurposes"
 REVERB_APP_SECRET="aDummySecretForDevelopmentPurposes"
-REVERB_HOST="localhost"
+REVERB_HOST=reverb
 REVERB_PORT=8080
 REVERB_SCHEME=http
 
@@ -88,15 +91,18 @@ VITE_REVERB_PORT="${REVERB_PORT}"
 VITE_REVERB_SCHEME="${REVERB_SCHEME}"
 ```
 
-### 3. Start the Application with Laravel Sail
+### 3. Prepare and start application
 
 ```bash
+# Install Laravel Sail
+composer install
+
 # Start all containers
 ./vendor/bin/sail up -d
 ```
 
 This command will start all the necessary Docker containers:
-- Laravel application (PHP 8.2+)
+- Laravel application (PHP 8.4+)
 - MySQL database
 - Redis for caching and queues
 - Queue worker for processing transcriptions
@@ -108,8 +114,14 @@ This command will start all the necessary Docker containers:
 # Install PHP dependencies
 ./vendor/bin/sail composer install
 
+# Generate application key
+./vendor/bin/sail artisan key:generate
+
 # Run database migrations
 ./vendor/bin/sail artisan migrate
+
+# storage link
+./vendor/bin/sail artisan storage:link
 
 # Install JavaScript dependencies
 ./vendor/bin/sail npm install
