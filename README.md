@@ -39,7 +39,7 @@ Darli is a web application that provides real-time speech-to-text transcription 
 
 ```bash
 git clone <repository-url>
-cd speech-to-text
+cd ai-speech-to-text-laravel-app
 ```
 
 ### 2. Environment Configuration
