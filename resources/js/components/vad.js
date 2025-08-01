@@ -3,7 +3,7 @@
  */
 
 // Constants
-const MAX_CHUNK_DURATION = 15000; // 15 seconds in milliseconds
+const MAX_CHUNK_DURATION = import.meta.env.VITE_MAX_CHUNK_DURATION ? parseInt(import.meta.env.VITE_MAX_CHUNK_DURATION) : 15000; // Default: 15 seconds in milliseconds
 
 /**
  * Creates and initializes a Voice Activity Detection instance
@@ -35,7 +35,7 @@ export const createVADController = (options) => {
 
         if (speechDuration >= MAX_CHUNK_DURATION) {
             console.log(`Speech duration reached ${MAX_CHUNK_DURATION}ms, forcing chunk...`);
-            options.updateStatus(`Max duration (15s) reached. Chunking audio...`, 'warning');
+            options.updateStatus(`Max duration (${MAX_CHUNK_DURATION/1000}s) reached. Chunking audio...`, 'warning');
 
             // Stop collecting audio frames
             isCollectingAudioFrames = false;
@@ -117,7 +117,7 @@ export const createVADController = (options) => {
                     }
                     chunkingTimer = setInterval(checkSpeechDuration, 1000);
 
-                    console.log('Speech tracking started, will chunk at 15 seconds if needed');
+                    console.log(`Speech tracking started, will chunk at ${MAX_CHUNK_DURATION/1000} second(s) if needed`);
 
                     if (options.onSpeechStart) {
                         options.onSpeechStart();

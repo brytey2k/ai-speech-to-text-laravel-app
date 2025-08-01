@@ -21,18 +21,6 @@ class AudioTranscriptionRepository
     }
 
     /**
-     * Get all transcriptions that have been completed
-     *
-     * @return Collection<int, AudioTranscription>
-     */
-    public function getCompletedTranscriptions(): Collection
-    {
-        return AudioTranscription::whereNotNull('transcription')
-            ->orderBy('created_at', 'desc')
-            ->get();
-    }
-
-    /**
      * Find an audio transcription by ID
      *
      * @param int $id

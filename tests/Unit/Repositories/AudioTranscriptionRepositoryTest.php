@@ -21,52 +21,6 @@ class AudioTranscriptionRepositoryTest extends TestCase
         $this->repository = new AudioTranscriptionRepository();
     }
 
-    public function test_get_completed_transcriptions_returns_only_completed_transcriptions(): void
-    {
-        // Create completed transcriptions
-        AudioTranscription::factory()->count(3)->create([
-            'transcription' => 'Test transcription',
-        ]);
-
-        // Create incomplete transcriptions
-        AudioTranscription::factory()->count(2)->create([
-            'transcription' => null,
-        ]);
-
-        $completedTranscriptions = $this->repository->getCompletedTranscriptions();
-
-        $this->assertCount(3, $completedTranscriptions);
-        foreach ($completedTranscriptions as $transcription) {
-            $this->assertNotNull($transcription->transcription);
-        }
-    }
-
-    public function test_get_completed_transcriptions_returns_in_descending_order(): void
-    {
-        // Create transcriptions with different timestamps
-        AudioTranscription::factory()->create([
-            'transcription' => 'First transcription',
-            'created_at' => now()->subDays(2),
-        ]);
-
-        AudioTranscription::factory()->create([
-            'transcription' => 'Second transcription',
-            'created_at' => now()->subDay(),
-        ]);
-
-        AudioTranscription::factory()->create([
-            'transcription' => 'Third transcription',
-            'created_at' => now(),
-        ]);
-
-        $completedTranscriptions = $this->repository->getCompletedTranscriptions();
-
-        $this->assertCount(3, $completedTranscriptions);
-        $this->assertEquals('Third transcription', $completedTranscriptions[0]?->transcription);
-        $this->assertEquals('Second transcription', $completedTranscriptions[1]?->transcription);
-        $this->assertEquals('First transcription', $completedTranscriptions[2]?->transcription);
-    }
-
     public function test_find_by_id_returns_correct_transcription(): void
     {
         $audioTranscription = AudioTranscription::factory()->create([

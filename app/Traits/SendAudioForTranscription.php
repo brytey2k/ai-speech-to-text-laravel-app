@@ -13,8 +13,9 @@ trait SendAudioForTranscription
     /**
      * @param string $fullPath
      *
-     * @return Response
      * @throws ConnectionException
+     *
+     * @return Response
      */
     private function sendFileToTranscriptionService(string $fullPath): Response
     {

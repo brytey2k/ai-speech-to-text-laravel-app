@@ -12,7 +12,6 @@ use App\Exceptions\AudioTranscriptionNotFoundException;
 use App\Models\AudioTranscription;
 use App\Repositories\AudioTranscriptionRepository;
 use App\Traits\SendAudioForTranscription;
-use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\Client\Response;

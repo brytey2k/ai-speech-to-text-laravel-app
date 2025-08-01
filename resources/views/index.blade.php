@@ -35,7 +35,6 @@
                             style="color: #616161;" disabled>X
                     </button>
                 </div>
-
             </div>
         </div>
 
@@ -43,7 +42,7 @@
         <div id="transcript-area"
              class="w-full {{ $hasTranscriptions ? 'h-1/2' : 'h-0' }} md:w-1/2 lg:w-1/2 xl:w-1/4 md:h-full p-4 pt-20 md:pt-4 pb-16 {{ !$hasTranscriptions ? 'hidden md:hidden' : '' }} transition-all duration-500 ease-in-out md:fixed md:right-0 md:top-14 md:bottom-8">
             <div id="audio-boxes-container" class="bg-white p-4 rounded-lg shadow-md h-full overflow-y-auto">
-                <h3 class="mb-3">Transcripts</h3>
+                <h3 class="mb-3 font-bold">Transcripts</h3>
                 <div id="audio-boxes-wrapper" class="space-y-4 pt-2">
                     @forelse($transcriptions as $transcription)
                         <div class="w-full mb-3" data-segment-id="{{ $transcription->id }}">
