@@ -1,6 +1,6 @@
-# Darli - Speech-to-Text Transcription Application
+# Speech-to-Text Transcription Application
 
-Darli is a web application that provides real-time speech-to-text transcription using OpenAI's Whisper API. It allows users to record audio through their browser, processes the audio segments, and displays the transcribed text.
+This is a web application that provides real-time speech-to-text transcription using OpenAI's Whisper API. It allows users to record audio through their browser, processes the audio segments, and displays the transcribed text.
 
 ## Features
 

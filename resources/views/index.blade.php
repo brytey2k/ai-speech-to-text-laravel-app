@@ -12,7 +12,7 @@
         <!-- Main content area (100% when no transcripts, 50% on md/lg screens, 75% on xl screens when transcripts exist) -->
         <div id="main-content-area"
              class="w-full {{ $hasTranscriptions ? 'md:w-1/2 lg:w-1/2 xl:w-3/4' : 'md:w-full' }} overflow-y-auto p-4 pt-24 md:pt-4 flex flex-col items-center justify-center {{ $hasTranscriptions ? 'h-1/2 md:h-full md:flex md:items-center md:justify-center' : 'h-full' }} space-y-8 transition-all duration-500 ease-in-out">
-            <h1 class="text-center mt-6 md:mt-0">Welcome to Darli</h1>
+            <h1 class="text-center mt-6 md:mt-0">Welcome to {{ config()->string('app.name') }}</h1>
 
             <div id="wavesurfer-container" class="w-full flex flex-col items-center space-y-8 relative z-10 mt-6">
                 <!-- Waveform visualization -->
